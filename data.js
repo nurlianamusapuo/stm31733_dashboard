@@ -109,7 +109,7 @@ const STUDENTS = [
 ];
 
 // Versi data — naik nombor apabila format data berubah
-const DATA_VERSION = "3";
+const DATA_VERSION = "4";
 
 // Simpan & muat data dari localStorage
 function saveData() {
