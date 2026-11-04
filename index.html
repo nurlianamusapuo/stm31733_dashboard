@@ -149,7 +149,7 @@ function pageInit() {
     const gagalCA   = STUDENTS.filter(s => caStatus(s.marks) === "gagal").length;
     const berisiko  = STUDENTS.filter(s => riskStatus(s.marks)).length;
     const topikDone = TOPICS.filter(t => t.status === "selesai").length;
-    const pbDone    = ASSESSMENTS.filter(a => calcPBStatus(a.id) === "selesai").length;
+    const pbDone    = ASSESSMENTS.filter(a => a.type !== "final" && calcPBStatus(a.id) === "selesai").length;
 
     document.getElementById("stat-grid").innerHTML = `
       <div class="stat-card blue">
