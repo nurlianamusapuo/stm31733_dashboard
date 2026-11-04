@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM31733 – Penilaian Berterusan</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="course-code">STM31733</div>
+      <div class="course-name">Network Administration</div>
+      <span class="class-badge">📚 Kelas S12627</span>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-section-title">Menu</div>
+      <a href="index.html"       class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="topics.html"      class="nav-item"><span class="icon">📚</span> Topik</a>
+      <a href="assessments.html" class="nav-item"><span class="icon">📋</span> Penilaian</a>
+      <a href="students.html"    class="nav-item"><span class="icon">👥</span> Pelajar</a>
+      <a href="reports.html"     class="nav-item"><span class="icon">📈</span> Laporan</a>
+    </nav>
+    <div class="sidebar-footer">
+      Nurliana Binti Musa<br>Sem 3 / Tahun 2 · 2025/2026
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">📋 Penilaian Berterusan</div>
+        <div class="topbar-sub">CA 70% + FA 30% = 100%</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- PB CARDS -->
+      <div class="pb-grid mb-5" id="pb-cards"></div>
+
+      <!-- ROW: Chart + Markah Stat -->
+      <div class="grid-2 mb-4">
+
+        <div class="card">
+          <div class="card-header"><h3>📊 Min Markah per Penilaian</h3></div>
+          <div class="card-body">
+            <div class="chart-container" style="height:220px">
+              <canvas id="avgChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>📊 Taburan Markah CA Pelajar</h3></div>
+          <div class="card-body">
+            <div class="chart-container" style="height:220px">
+              <canvas id="caChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TABLE: Statistik per PB -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>📈 Statistik Markah per Penilaian</h3>
+        </div>
+        <div class="card-body p0">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Penilaian</th>
+                  <th>Jenis</th>
+                  <th class="center">Wajaran</th>
+                  <th class="center">CLO</th>
+                  <th class="center">Topik</th>
+                  <th class="center">Pelajar Dinilai</th>
+                  <th class="center">Min</th>
+                  <th class="center">Maks</th>
+                  <th class="center">Min Markah</th>
+                  <th class="center">% Lulus</th>
+                  <th class="center">Status</th>
+                  <th class="center">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="pb-stats-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit Status PB -->
+<div class="modal-overlay" id="pbModal">
+  <div class="modal">
+    <h2 id="pb-modal-title">✏️ Kemaskini Status Penilaian</h2>
+    <input type="hidden" id="pb-edit-id">
+    <div class="form-group">
+      <label>Status Penilaian</label>
+      <select id="pb-status">
+        <option value="belum">— Belum Dimulakan</option>
+        <option value="sedang">⟳ Aktif / Sedang Dinilai</option>
+        <option value="selesai">✓ Selesai</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tarikh Penilaian (pilihan)</label>
+      <input type="text" id="pb-date" placeholder="Contoh: 10 November 2025">
+    </div>
+    <div class="form-group">
+      <label>Catatan (pilihan)</label>
+      <input type="text" id="pb-note" placeholder="Contoh: Ujian diadakan di Bilik 103">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closePbModal()">Batal</button>
+      <button class="btn btn-primary" onclick="savePbStatus()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+let avgChartInst = null;
+let caChartInst  = null;
+
+function pageInit() {
+    setActiveNav();
+    renderPBCards();
+    renderPBStatsTable();
+    renderCharts();
+}
+
+function calcPBStats(pbId) {
+    const maxMap = { PB1:15, PB2:15, PB3:15, PB4:15, PB5:10, FA:30 };
+    const vals = STUDENTS.map(s => s.marks[pbId]).filter(v => v !== null && v !== "").map(Number);
+    if (!vals.length) return null;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const avg = parseFloat((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2));
+    const passThreshold = maxMap[pbId] * 0.4;
+    const passPct = parseFloat(((vals.filter(v=>v>=passThreshold).length/vals.length)*100).toFixed(1));
+    return { min, max, avg, count: vals.length, passPct };
+}
+
+function renderPBCards() {
+    const typeClass = { test:"test", practical:"practical", presentation:"presentation", final:"final" };
+    const typeIcon  = { test:"📝", practical:"💻", presentation:"🎤", final:"📄" };
+    document.getElementById("pb-cards").innerHTML = ASSESSMENTS.map(a => {
+        const stats = calcPBStats(a.id);
+        const submitted = assessmentSubmittedCount(a.id);
+        const pct = Math.round((submitted / STUDENTS.length) * 100);
+        return `
+        <div class="pb-card ${typeClass[a.type] || ''}">
+          <div class="pb-id">${typeIcon[a.type] || ''} ${a.id}</div>
+          <div class="pb-name">${a.name}</div>
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div class="pb-weight">${a.weight}%</div>
+            <span style="font-size:11px;color:var(--muted)">wajaran</span>
+          </div>
+          <div class="pb-clo">${a.clo} · Topik ${a.topics}</div>
+          <div style="margin-top:6px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Siap dinilai: ${submitted}/${STUDENTS.length} (${pct}%)</div>
+            ${progressBar(pct)}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+            ${pbStatusBadge(a.status)}
+            <button class="btn btn-outline btn-sm" onclick="openPbModal('${a.id}')">✏️</button>
+          </div>
+          ${a.date ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">📅 ${a.date}</div>` : ""}
+          ${a.note ? `<div style="font-size:11px;color:var(--muted)">📝 ${a.note}</div>` : ""}
+          ${stats ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Min: <strong>${stats.avg}</strong> | Lulus: <strong>${stats.passPct}%</strong></div>` : ""}
+        </div>
+        `;
+    }).join("");
+}
+
+function renderPBStatsTable() {
+    const maxMap = { PB1:15, PB2:15, PB3:15, PB4:15, PB5:10, FA:30 };
+    document.getElementById("pb-stats-table").innerHTML = ASSESSMENTS.map(a => {
+        const stats = calcPBStats(a.id);
+        const submitted = assessmentSubmittedCount(a.id);
+        return `<tr>
+          <td><strong>${a.id}</strong></td>
+          <td>${a.name}</td>
+          <td class="center"><strong>${a.weight}%</strong></td>
+          <td class="center"><span class="badge badge-primary">${a.clo}</span></td>
+          <td class="center">${a.topics}</td>
+          <td class="center">${submitted}/${STUDENTS.length}</td>
+          <td class="center">${stats ? stats.min : '—'}</td>
+          <td class="center">${stats ? stats.max : '—'}</td>
+          <td class="center">${stats ? stats.avg : '—'}</td>
+          <td class="center" style="${stats ? (stats.passPct>=70?'color:#16a34a;font-weight:700':stats.passPct>=40?'color:#d97706;font-weight:700':'color:#dc2626;font-weight:700') : ''}">${stats ? stats.passPct + '%' : '—'}</td>
+          <td class="center">${pbStatusBadge(a.status)}</td>
+          <td class="center"><button class="btn btn-outline btn-sm" onclick="openPbModal('${a.id}')">✏️</button></td>
+        </tr>`;
+    }).join("");
+}
+
+function renderCharts() {
+    // Min markah per PB
+    const labels  = ASSESSMENTS.map(a => a.id);
+    const avgs    = ASSESSMENTS.map(a => { const s = calcPBStats(a.id); return s ? s.avg : 0; });
+    const maxes   = ASSESSMENTS.map(a => { const m = {PB1:15,PB2:15,PB3:15,PB4:15,PB5:10,FA:30}; return m[a.id]; });
+    const colors  = ["#1a56a0","#2e7d32","#2e7d32","#2e7d32","#e65100","#7c3aed"];
+
+    if (avgChartInst) avgChartInst.destroy();
+    avgChartInst = new Chart(document.getElementById("avgChart"), {
+        type: "bar",
+        data: {
+            labels,
+            datasets: [
+                { label: "Min Markah", data: avgs, backgroundColor: colors, borderRadius: 6 },
+                { label: "Markah Penuh", data: maxes, backgroundColor: "rgba(0,0,0,0.06)", borderRadius: 6 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom", labels: { font:{ size:11 } } } },
+            scales: { y: { beginAtZero: true, ticks: { font:{ size:11 } } }, x: { ticks:{ font:{ size:11 } } } }
+        }
+    });
+
+    // Taburan CA pelajar (bar — range markah)
+    const ranges = ["0–14","15–21","22–27","28–42","43–56","57–70"];
+    const rangeCounts = [0,0,0,0,0,0];
+    STUDENTS.forEach(s => {
+        const ca = calcCA(s.marks);
+        if (ca === null) return;
+        if (ca <= 14) rangeCounts[0]++;
+        else if (ca <= 21) rangeCounts[1]++;
+        else if (ca <= 27) rangeCounts[2]++;
+        else if (ca <= 42) rangeCounts[3]++;
+        else if (ca <= 56) rangeCounts[4]++;
+        else rangeCounts[5]++;
+    });
+    const rColors = ["#dc2626","#dc2626","#dc2626","#16a34a","#16a34a","#16a34a"];
+
+    if (caChartInst) caChartInst.destroy();
+    caChartInst = new Chart(document.getElementById("caChart"), {
+        type: "bar",
+        data: {
+            labels: ranges,
+            datasets: [{ label: "Bilangan Pelajar", data: rangeCounts, backgroundColor: rColors, borderRadius: 6 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                annotation: {}
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, font:{ size:11 } } },
+                x: { ticks: { font:{ size:11 } } }
+            }
+        }
+    });
+}
+
+function openPbModal(id) {
+    const a = ASSESSMENTS.find(x => x.id === id);
+    if (!a) return;
+    document.getElementById("pb-edit-id").value = id;
+    document.getElementById("pb-modal-title").textContent = `✏️ Kemaskini – ${a.id}: ${a.name}`;
+    document.getElementById("pb-status").value = a.status;
+    document.getElementById("pb-date").value   = a.date || "";
+    document.getElementById("pb-note").value   = a.note || "";
+    document.getElementById("pbModal").classList.add("open");
+}
+
+function savePbStatus() {
+    const id   = document.getElementById("pb-edit-id").value;
+    const a    = ASSESSMENTS.find(x => x.id === id);
+    if (!a) return;
+    a.status   = document.getElementById("pb-status").value;
+    const date = document.getElementById("pb-date").value.trim();
+    const note = document.getElementById("pb-note").value.trim();
+    if (date) a.date = date; else delete a.date;
+    if (note) a.note = note; else delete a.note;
+    saveData();
+    closePbModal();
+    renderPBCards();
+    renderPBStatsTable();
+    showToast("✅ Status penilaian berjaya dikemaskini!");
+}
+
+function closePbModal() {
+    document.getElementById("pbModal").classList.remove("open");
+}
+</script>
+</body>
+</html>

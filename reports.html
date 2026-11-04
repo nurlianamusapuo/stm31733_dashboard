@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM31733 – Laporan & CLO Attainment</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="course-code">STM31733</div>
+      <div class="course-name">Network Administration</div>
+      <span class="class-badge">📚 Kelas S12627</span>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-section-title">Menu</div>
+      <a href="index.html"       class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="topics.html"      class="nav-item"><span class="icon">📚</span> Topik</a>
+      <a href="assessments.html" class="nav-item"><span class="icon">📋</span> Penilaian</a>
+      <a href="students.html"    class="nav-item"><span class="icon">👥</span> Pelajar</a>
+      <a href="reports.html"     class="nav-item"><span class="icon">📈</span> Laporan</a>
+    </nav>
+    <div class="sidebar-footer">
+      Nurliana Binti Musa<br>Sem 3 / Tahun 2 · 2025/2026
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">📈 Laporan & CLO Attainment</div>
+        <div class="topbar-sub">Analisis Prestasi Kursus STM31733</div>
+      </div>
+      <button class="btn btn-primary" onclick="printReport()">🖨️ Cetak / Simpan PDF</button>
+    </div>
+
+    <div class="content" id="printable">
+
+      <!-- HEADER INFO -->
+      <div class="card mb-5">
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+            <div>
+              <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Kursus</div>
+              <div style="font-weight:700;font-size:14px">STM31733 Network Administration</div>
+            </div>
+            <div>
+              <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Pensyarah</div>
+              <div style="font-weight:700">Nurliana Binti Musa</div>
+            </div>
+            <div>
+              <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Kelas</div>
+              <div style="font-weight:700">S12627 · Sem 3 / Tahun 2</div>
+            </div>
+            <div>
+              <div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Tarikh Laporan</div>
+              <div style="font-weight:700" id="report-date"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAT SUMMARY -->
+      <div class="stat-grid mb-5" id="report-stats"></div>
+
+      <!-- ROW: CLO + Radar -->
+      <div class="grid-2 mb-4">
+
+        <!-- CLO ATTAINMENT -->
+        <div class="card">
+          <div class="card-header"><h3>🎯 CLO Attainment</h3></div>
+          <div class="card-body" id="clo-section"></div>
+        </div>
+
+        <!-- RADAR CHART -->
+        <div class="card">
+          <div class="card-header"><h3>🕸️ Carta Radar CLO</h3></div>
+          <div class="card-body">
+            <div class="chart-container" style="height:220px">
+              <canvas id="radarChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW: Trend per PB + Prestasi CA -->
+      <div class="grid-2 mb-4">
+
+        <div class="card">
+          <div class="card-header"><h3>📊 Min Markah per Penilaian</h3></div>
+          <div class="card-body">
+            <div class="chart-container" style="height:200px">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>🥧 Taburan Status CA Pelajar</h3></div>
+          <div class="card-body">
+            <div class="chart-container" style="height:200px">
+              <canvas id="pieChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RINGKASAN KEPUTUSAN -->
+      <div class="card mb-4">
+        <div class="card-header"><h3>📋 Ringkasan Keputusan Akhir Pelajar</h3></div>
+        <div class="card-body p0">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nama Pelajar</th>
+                  <th class="center">CA (/70)</th>
+                  <th class="center">FA (/30)</th>
+                  <th class="center">Jumlah (/100)</th>
+                  <th class="center">Status CA</th>
+                  <th class="center">Status FA</th>
+                  <th class="center">Keputusan</th>
+                </tr>
+              </thead>
+              <tbody id="summary-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALISIS TEKS -->
+      <div class="card mb-4">
+        <div class="card-header"><h3>📝 Analisis & Pemerhatian</h3></div>
+        <div class="card-body" id="analysis-text"></div>
+      </div>
+
+    </div><!-- /printable -->
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+function pageInit() {
+    setActiveNav();
+    document.getElementById("report-date").textContent =
+        new Date().toLocaleDateString("ms-MY", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+    renderReportStats();
+    renderCLOSection();
+    renderSummaryTable();
+    renderCharts();
+    renderAnalysis();
+}
+
+function renderReportStats() {
+    const total  = STUDENTS.length;
+    const lulusCA  = STUDENTS.filter(s => caStatus(s.marks) === "lulus").length;
+    const gagalCA  = STUDENTS.filter(s => caStatus(s.marks) === "gagal").length;
+    const lulusFull = STUDENTS.filter(s => overallStatus(s.marks) === "lulus").length;
+    const belum    = STUDENTS.filter(s => caStatus(s.marks) === "tiada").length;
+    const caAvgs   = STUDENTS.map(s => calcCA(s.marks)).filter(v=>v!==null);
+    const caAvg    = caAvgs.length ? (caAvgs.reduce((a,b)=>a+b,0)/caAvgs.length).toFixed(1) : "—";
+
+    document.getElementById("report-stats").innerHTML = `
+      <div class="stat-card blue"><div class="stat-label">Jumlah Pelajar</div><div class="stat-value">${total}</div></div>
+      <div class="stat-card green"><div class="stat-label">Lulus CA</div><div class="stat-value">${lulusCA}</div><div class="stat-sub">${total?Math.round(lulusCA/total*100):0}% daripada kelas</div></div>
+      <div class="stat-card red"><div class="stat-label">Gagal CA</div><div class="stat-value">${gagalCA}</div><div class="stat-sub">${total?Math.round(gagalCA/total*100):0}% daripada kelas</div></div>
+      <div class="stat-card green"><div class="stat-label">Lulus Penuh</div><div class="stat-value">${lulusFull}</div><div class="stat-sub">CA + FA</div></div>
+      <div class="stat-card teal"><div class="stat-label">Min CA Kelas</div><div class="stat-value">${caAvg}</div><div class="stat-sub">daripada 70</div></div>
+      <div class="stat-card amber"><div class="stat-label">Belum Lengkap</div><div class="stat-value">${belum}</div><div class="stat-sub">Tiada markah</div></div>
+    `;
+}
+
+function renderCLOSection() {
+    const clo = calcCLOAttainment();
+    const cloDefs = {
+        CLO1: { title: "CLO 1", desc: "Identify concepts of network administration", domain: "C3", plo: "PLO1", color: "#1a56a0" },
+        CLO2: { title: "CLO 2", desc: "Implement basic configuration for network devices", domain: "P3", plo: "PLO3", color: "#2e7d32" },
+        CLO3: { title: "CLO 3", desc: "Perform group discussion in network monitoring", domain: "A2", plo: "PLO8", color: "#e65100" },
+    };
+    let html = "";
+    for (const [key, def] of Object.entries(cloDefs)) {
+        const pct = clo[key];
+        const v = pct !== null ? pct : 0;
+        const achieved = pct !== null && pct >= 50;
+        html += `
+        <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;border-left:4px solid ${def.color}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:${def.color}">${def.title}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px">${def.desc}</div>
+              <div style="margin-top:4px">
+                <span class="badge badge-neutral">${def.domain}</span>
+                <span class="badge badge-primary" style="margin-left:4px">${def.plo}</span>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:22px;font-weight:800;color:${def.color}">${pct !== null ? v + "%" : "—"}</div>
+              ${pct !== null ? (achieved ? '<span class="badge badge-success">✅ Dicapai</span>' : '<span class="badge badge-danger">❌ Tidak Dicapai</span>') : '<span class="badge badge-neutral">Tiada Data</span>'}
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:${v}%;background:${def.color}"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">
+            <span>Ambang: 50%</span>
+            <span>Pencapaian semasa: ${v}%</span>
+          </div>
+        </div>
+        `;
+    }
+    if (!html) html = '<div class="text-muted">Belum ada markah dimasukkan untuk pengiraan CLO.</div>';
+    document.getElementById("clo-section").innerHTML = html;
+}
+
+function renderSummaryTable() {
+    document.getElementById("summary-table").innerHTML = STUDENTS.map((s, i) => {
+        const ca    = calcCA(s.marks);
+        const total = calcTotal(s.marks);
+        const cs    = caStatus(s.marks);
+        const fs    = faStatus(s.marks);
+        const os    = overallStatus(s.marks);
+        const osBadge =
+            os === "lulus" ? '<span class="badge badge-success">✅ LULUS</span>' :
+            os === "gagal" ? '<span class="badge badge-danger">❌ GAGAL</span>' :
+            '<span class="badge badge-neutral">— Belum</span>';
+        return `<tr>
+          <td>${i+1}</td>
+          <td><strong>${s.name}</strong></td>
+          <td class="center" style="${cs==='gagal'?'color:#dc2626;font-weight:700':cs==='lulus'?'color:#16a34a;font-weight:700':''}">${ca!==null?ca:'—'}</td>
+          <td class="center" style="${fs==='gagal'?'color:#dc2626;font-weight:700':fs==='lulus'?'color:#16a34a;font-weight:700':''}">${s.marks.FA!==null?s.marks.FA:'—'}</td>
+          <td class="center" style="font-weight:700">${total!==null?total:'—'}</td>
+          <td class="center">${cs==='lulus'?'<span class="badge badge-success">Lulus</span>':cs==='gagal'?'<span class="badge badge-danger">Gagal</span>':'<span class="badge badge-neutral">—</span>'}</td>
+          <td class="center">${fs==='lulus'?'<span class="badge badge-success">Lulus</span>':fs==='gagal'?'<span class="badge badge-danger">Gagal</span>':'<span class="badge badge-neutral">—</span>'}</td>
+          <td class="center">${osBadge}</td>
+        </tr>`;
+    }).join("");
+}
+
+function renderCharts() {
+    const clo = calcCLOAttainment();
+
+    // Radar CLO
+    new Chart(document.getElementById("radarChart"), {
+        type: "radar",
+        data: {
+            labels: ["CLO 1\n(C3)", "CLO 2\n(P3)", "CLO 3\n(A2)"],
+            datasets: [{
+                label: "Pencapaian (%)",
+                data: [clo.CLO1??0, clo.CLO2??0, clo.CLO3??0],
+                backgroundColor: "rgba(26,86,160,0.15)",
+                borderColor: "#1a56a0",
+                pointBackgroundColor: "#1a56a0",
+                borderWidth: 2
+            }, {
+                label: "Ambang (50%)",
+                data: [50,50,50],
+                backgroundColor: "rgba(220,38,38,0.05)",
+                borderColor: "#dc2626",
+                borderDash: [5,5],
+                pointRadius: 0,
+                borderWidth: 1.5
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { r: { min: 0, max: 100, ticks: { stepSize: 25, font:{ size:10 } }, pointLabels:{ font:{ size:11 } } } },
+            plugins: { legend: { position: "bottom", labels: { font:{ size:11 } } } }
+        }
+    });
+
+    // Trend min per PB
+    const pbLabels = ASSESSMENTS.map(a => a.id);
+    const pbAvgs   = ASSESSMENTS.map(a => {
+        const vals = STUDENTS.map(s=>s.marks[a.id]).filter(v=>v!==null&&v!=="").map(Number);
+        return vals.length ? parseFloat((vals.reduce((x,y)=>x+y,0)/vals.length).toFixed(1)) : 0;
+    });
+    new Chart(document.getElementById("trendChart"), {
+        type: "bar",
+        data: {
+            labels: pbLabels,
+            datasets: [{ label: "Min Markah", data: pbAvgs, backgroundColor: ["#1a56a0","#2e7d32","#2e7d32","#2e7d32","#e65100","#7c3aed"], borderRadius:6 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { font:{ size:11 } } }, x: { ticks:{ font:{ size:11 } } } }
+        }
+    });
+
+    // Pie chart
+    const lulus  = STUDENTS.filter(s => caStatus(s.marks) === "lulus").length;
+    const gagal  = STUDENTS.filter(s => caStatus(s.marks) === "gagal").length;
+    const blm    = STUDENTS.filter(s => caStatus(s.marks) === "tiada").length;
+    new Chart(document.getElementById("pieChart"), {
+        type: "pie",
+        data: {
+            labels: ["Lulus CA", "Gagal CA", "Belum Ada Markah"],
+            datasets: [{ data: [lulus, gagal, blm], backgroundColor: ["#16a34a","#dc2626","#94a3b8"], borderWidth: 2 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom", labels: { font:{ size:11 } } } }
+        }
+    });
+}
+
+function renderAnalysis() {
+    const total   = STUDENTS.length;
+    const lulusCA = STUDENTS.filter(s => caStatus(s.marks) === "lulus").length;
+    const gagalCA = STUDENTS.filter(s => caStatus(s.marks) === "gagal").length;
+    const berisiko = STUDENTS.filter(s => riskStatus(s.marks)).length;
+    const clo     = calcCLOAttainment();
+    const caAvgs  = STUDENTS.map(s => calcCA(s.marks)).filter(v=>v!==null);
+    const caAvg   = caAvgs.length ? (caAvgs.reduce((a,b)=>a+b,0)/caAvgs.length).toFixed(1) : null;
+
+    let points = [];
+
+    if (caAvgs.length === 0) {
+        points.push("⚪ Belum ada markah pelajar yang dimasukkan. Sila masukkan markah melalui halaman <strong>Rekod Pelajar</strong>.");
+    } else {
+        if (caAvg) points.push(`📊 Min markah CA keseluruhan kelas ialah <strong>${caAvg}/70</strong> (${((caAvg/70)*100).toFixed(1)}%).`);
+        if (lulusCA === total) points.push(`🏆 Tahniah! Semua ${total} pelajar telah lulus CA.`);
+        else if (lulusCA > 0) points.push(`✅ Sebanyak <strong>${lulusCA} daripada ${total} pelajar (${Math.round(lulusCA/total*100)}%)</strong> telah lulus CA (≥ 28/70).`);
+        if (gagalCA > 0) points.push(`⚠️ Sebanyak <strong>${gagalCA} pelajar (${Math.round(gagalCA/total*100)}%)</strong> gagal CA. Tindakan pemulihan perlu diambil segera.`);
+        if (berisiko > 0) points.push(`🔍 <strong>${berisiko} pelajar</strong> dikenal pasti berisiko berdasarkan prestasi semasa.`);
+        for (const [c, pct] of Object.entries(clo)) {
+            if (pct !== null) {
+                const achieved = pct >= 50;
+                points.push(`${achieved ? '✅' : '❌'} ${c}: Pencapaian <strong>${pct}%</strong> — ${achieved ? 'DICAPAI' : 'TIDAK DICAPAI (perlu penambahbaikan)'}.`);
+            }
+        }
+    }
+
+    document.getElementById("analysis-text").innerHTML =
+        `<ul style="list-style:none;display:flex;flex-direction:column;gap:8px">${points.map(p=>`<li style="padding:8px 12px;background:#f8fafc;border-radius:6px;border-left:3px solid var(--primary)">${p}</li>`).join("")}</ul>`;
+}
+
+function printReport() {
+    window.print();
+}
+</script>
+
+<style>
+@media print {
+    .sidebar, .topbar { display: none !important; }
+    .main { margin-left: 0 !important; }
+    .content { padding: 0 !important; }
+    .btn { display: none !important; }
+}
+</style>
+</body>
+</html>

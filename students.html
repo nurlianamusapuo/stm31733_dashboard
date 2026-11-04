@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM31733 – Rekod Pelajar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="course-code">STM31733</div>
+      <div class="course-name">Network Administration</div>
+      <span class="class-badge">📚 Kelas S12627</span>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-section-title">Menu</div>
+      <a href="index.html"       class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="topics.html"      class="nav-item"><span class="icon">📚</span> Topik</a>
+      <a href="assessments.html" class="nav-item"><span class="icon">📋</span> Penilaian</a>
+      <a href="students.html"    class="nav-item"><span class="icon">👥</span> Pelajar</a>
+      <a href="reports.html"     class="nav-item"><span class="icon">📈</span> Laporan</a>
+    </nav>
+    <div class="sidebar-footer">
+      Nurliana Binti Musa<br>Sem 3 / Tahun 2 · 2025/2026
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">👥 Rekod Pelajar</div>
+        <div class="topbar-sub">Kelas S12627 · 15 Pelajar</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" onclick="openAddModal()">+ Tambah Pelajar</button>
+        <button class="btn btn-outline" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- STAT MINI -->
+      <div class="stat-grid mb-5" id="mini-stats"></div>
+
+      <!-- FILTER -->
+      <div class="card mb-4">
+        <div class="card-body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="searchInput" placeholder="🔍 Cari nama pelajar..." style="max-width:260px" oninput="renderTable()">
+          <select id="filterStatus" onchange="renderTable()" style="max-width:180px">
+            <option value="">Semua Status</option>
+            <option value="lulus">✅ Lulus CA</option>
+            <option value="gagal">❌ Gagal CA</option>
+            <option value="berisiko">⚠️ Berisiko</option>
+            <option value="belum">— Belum Lengkap</option>
+          </select>
+          <span id="filter-count" class="text-muted"></span>
+        </div>
+      </div>
+
+      <!-- MAIN TABLE -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>Markah Penilaian Berterusan & Peperiksaan Akhir</h3>
+        </div>
+        <div class="card-body p0">
+          <div class="table-wrap">
+            <table class="marks-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nama Pelajar</th>
+                  <th class="center" title="Test (15%)">PB1<br><small style="font-weight:400">/15</small></th>
+                  <th class="center" title="Practical 1 (15%)">PB2<br><small style="font-weight:400">/15</small></th>
+                  <th class="center" title="Practical 2 (15%)">PB3<br><small style="font-weight:400">/15</small></th>
+                  <th class="center" title="Practical 3 (15%)">PB4<br><small style="font-weight:400">/15</small></th>
+                  <th class="center" title="Presentation (10%)">PB5<br><small style="font-weight:400">/10</small></th>
+                  <th class="center" title="Jumlah CA (70%)">CA<br><small style="font-weight:400">/70</small></th>
+                  <th class="center" title="Final Assessment (30%)">FA<br><small style="font-weight:400">/30</small></th>
+                  <th class="center" title="Jumlah Keseluruhan (100%)">Jumlah<br><small style="font-weight:400">/100</small></th>
+                  <th class="center">Status</th>
+                  <th class="center">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="students-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit Markah -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2 id="modal-title">✏️ Edit Markah Pelajar</h2>
+    <input type="hidden" id="edit-sid">
+    <div class="form-group">
+      <label>Nama Pelajar</label>
+      <input type="text" id="edit-name" placeholder="Nama penuh pelajar">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>PB1 – Test (max 15)</label>
+        <input type="number" id="edit-pb1" min="0" max="15" step="0.5" placeholder="0–15">
+      </div>
+      <div class="form-group">
+        <label>PB2 – Practical 1 (max 15)</label>
+        <input type="number" id="edit-pb2" min="0" max="15" step="0.5" placeholder="0–15">
+      </div>
+      <div class="form-group">
+        <label>PB3 – Practical 2 (max 15)</label>
+        <input type="number" id="edit-pb3" min="0" max="15" step="0.5" placeholder="0–15">
+      </div>
+      <div class="form-group">
+        <label>PB4 – Practical 3 (max 15)</label>
+        <input type="number" id="edit-pb4" min="0" max="15" step="0.5" placeholder="0–15">
+      </div>
+      <div class="form-group">
+        <label>PB5 – Presentation (max 10)</label>
+        <input type="number" id="edit-pb5" min="0" max="10" step="0.5" placeholder="0–10">
+      </div>
+      <div class="form-group">
+        <label>FA – Final Assessment (max 30)</label>
+        <input type="number" id="edit-fa" min="0" max="30" step="0.5" placeholder="0–30">
+      </div>
+    </div>
+    <div id="edit-preview" style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:4px;font-size:12px;color:var(--muted)"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('editModal')">Batal</button>
+      <button class="btn btn-primary" onclick="saveMarks()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Tambah Pelajar -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h2>➕ Tambah Pelajar Baharu</h2>
+    <div class="form-group">
+      <label>Nama Penuh Pelajar</label>
+      <input type="text" id="new-name" placeholder="Contoh: Ahmad bin Ali">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('addModal')">Batal</button>
+      <button class="btn btn-success" onclick="addStudent()">➕ Tambah</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+const MAX_MARKS = { PB1:15, PB2:15, PB3:15, PB4:15, PB5:10, FA:30 };
+const PB_KEYS   = ["PB1","PB2","PB3","PB4","PB5"];
+
+function pageInit() {
+    setActiveNav();
+    renderStats();
+    renderTable();
+
+    // Live preview markah dalam modal
+    ["pb1","pb2","pb3","pb4","pb5","fa"].forEach(f => {
+        document.getElementById("edit-" + f).addEventListener("input", updatePreview);
+    });
+}
+
+function renderStats() {
+    const lulus   = STUDENTS.filter(s => caStatus(s.marks) === "lulus").length;
+    const gagal   = STUDENTS.filter(s => caStatus(s.marks) === "gagal").length;
+    const berisiko = STUDENTS.filter(s => riskStatus(s.marks)).length;
+    const belum   = STUDENTS.filter(s => caStatus(s.marks) === "tiada").length;
+    document.getElementById("mini-stats").innerHTML = `
+      <div class="stat-card blue"><div class="stat-label">Jumlah</div><div class="stat-value">${STUDENTS.length}</div><div class="stat-sub">Pelajar</div></div>
+      <div class="stat-card green"><div class="stat-label">Lulus CA</div><div class="stat-value">${lulus}</div><div class="stat-sub">≥ 28/70</div></div>
+      <div class="stat-card red"><div class="stat-label">Gagal CA</div><div class="stat-value">${gagal}</div><div class="stat-sub">< 28/70</div></div>
+      <div class="stat-card amber"><div class="stat-label">Berisiko</div><div class="stat-value">${berisiko}</div><div class="stat-sub">Perlu pantau</div></div>
+      <div class="stat-card teal"><div class="stat-label">Belum Lengkap</div><div class="stat-value">${belum}</div><div class="stat-sub">Tiada markah</div></div>
+    `;
+}
+
+function renderTable() {
+    const query  = document.getElementById("searchInput").value.toLowerCase();
+    const filter = document.getElementById("filterStatus").value;
+
+    let list = STUDENTS.filter(s => {
+        if (query && !s.name.toLowerCase().includes(query)) return false;
+        if (filter === "lulus")    return caStatus(s.marks) === "lulus";
+        if (filter === "gagal")    return caStatus(s.marks) === "gagal";
+        if (filter === "berisiko") return riskStatus(s.marks);
+        if (filter === "belum")    return caStatus(s.marks) === "tiada";
+        return true;
+    });
+
+    document.getElementById("filter-count").textContent = `${list.length} pelajar dipapar`;
+
+    if (list.length === 0) {
+        document.getElementById("students-tbody").innerHTML =
+            `<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--muted)">Tiada rekod ditemui.</td></tr>`;
+        return;
+    }
+
+    document.getElementById("students-tbody").innerHTML = list.map((s, i) => {
+        const ca = calcCA(s.marks);
+        const total = calcTotal(s.marks);
+        const cs = caStatus(s.marks);
+        const fs = faStatus(s.marks);
+        const os = overallStatus(s.marks);
+        const risk = riskStatus(s.marks);
+
+        const statusBadgeHtml =
+            os === "lulus"  ? '<span class="badge badge-success">✅ Lulus</span>' :
+            os === "gagal"  ? '<span class="badge badge-danger">❌ Gagal</span>' :
+            risk            ? '<span class="badge badge-warning">⚠️ Berisiko</span>' :
+                              '<span class="badge badge-neutral">— Belum</span>';
+
+        const caStyle = cs === "gagal" ? "color:#dc2626;font-weight:700" : cs === "lulus" ? "color:#16a34a;font-weight:700" : "";
+
+        return `<tr>
+          <td>${i+1}</td>
+          <td><strong>${s.name}</strong>${risk && cs !== "gagal" ? ' <span style="font-size:10px;color:#d97706">⚠️</span>' : ''}</td>
+          ${PB_KEYS.map((k, j) => {
+            const v = s.marks[k];
+            const style = v !== null && v !== "" ? markColor(v, MAX_MARKS[k]) : "color:var(--muted)";
+            return `<td class="center" style="${style}">${v !== null && v !== "" ? v : '—'}</td>`;
+          }).join("")}
+          <td class="center" style="${caStyle}">${ca !== null ? ca : '—'}</td>
+          <td class="center" style="${fs==='gagal'?'color:#dc2626;font-weight:700':fs==='lulus'?'color:#16a34a;font-weight:700':''}">${s.marks.FA !== null && s.marks.FA !== "" ? s.marks.FA : '—'}</td>
+          <td class="center" style="font-weight:700">${total !== null ? total : '—'}</td>
+          <td class="center">${statusBadgeHtml}</td>
+          <td class="center">
+            <button class="btn btn-outline btn-sm" onclick="openEditModal(${s.id})">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteStudent(${s.id})">🗑</button>
+          </td>
+        </tr>`;
+    }).join("");
+}
+
+function openEditModal(id) {
+    const s = STUDENTS.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById("edit-sid").value  = id;
+    document.getElementById("edit-name").value = s.name;
+    document.getElementById("edit-pb1").value  = s.marks.PB1 !== null ? s.marks.PB1 : "";
+    document.getElementById("edit-pb2").value  = s.marks.PB2 !== null ? s.marks.PB2 : "";
+    document.getElementById("edit-pb3").value  = s.marks.PB3 !== null ? s.marks.PB3 : "";
+    document.getElementById("edit-pb4").value  = s.marks.PB4 !== null ? s.marks.PB4 : "";
+    document.getElementById("edit-pb5").value  = s.marks.PB5 !== null ? s.marks.PB5 : "";
+    document.getElementById("edit-fa").value   = s.marks.FA  !== null ? s.marks.FA  : "";
+    document.getElementById("modal-title").textContent = "✏️ Edit Markah – " + s.name;
+    updatePreview();
+    document.getElementById("editModal").classList.add("open");
+}
+
+function updatePreview() {
+    const marks = {
+        PB1: document.getElementById("edit-pb1").value !== "" ? parseFloat(document.getElementById("edit-pb1").value) : null,
+        PB2: document.getElementById("edit-pb2").value !== "" ? parseFloat(document.getElementById("edit-pb2").value) : null,
+        PB3: document.getElementById("edit-pb3").value !== "" ? parseFloat(document.getElementById("edit-pb3").value) : null,
+        PB4: document.getElementById("edit-pb4").value !== "" ? parseFloat(document.getElementById("edit-pb4").value) : null,
+        PB5: document.getElementById("edit-pb5").value !== "" ? parseFloat(document.getElementById("edit-pb5").value) : null,
+        FA:  document.getElementById("edit-fa").value  !== "" ? parseFloat(document.getElementById("edit-fa").value)  : null,
+    };
+    const ca = calcCA(marks);
+    const total = calcTotal(marks);
+    const cs = caStatus(marks);
+    const fs = faStatus(marks);
+    const caColor = cs === "lulus" ? "#16a34a" : cs === "gagal" ? "#dc2626" : "#6b7280";
+    const faColor = fs === "lulus" ? "#16a34a" : fs === "gagal" ? "#dc2626" : "#6b7280";
+    document.getElementById("edit-preview").innerHTML = `
+      <strong>Pratontonan:</strong>
+      CA = <strong style="color:${caColor}">${ca !== null ? ca + "/70" : "—"}</strong>
+      (${cs === "lulus" ? "✅ Lulus" : cs === "gagal" ? "❌ Gagal" : "—"}) &nbsp;|&nbsp;
+      FA = <strong style="color:${faColor}">${marks.FA !== null ? marks.FA + "/30" : "—"}</strong>
+      (${fs === "lulus" ? "✅ Lulus" : fs === "gagal" ? "❌ Gagal" : "—"}) &nbsp;|&nbsp;
+      Jumlah = <strong>${total !== null ? total + "/100" : "—"}</strong>
+    `;
+}
+
+function saveMarks() {
+    const id   = parseInt(document.getElementById("edit-sid").value);
+    const name = document.getElementById("edit-name").value.trim();
+    const s    = STUDENTS.find(x => x.id === id);
+    if (!s || !name) { showToast("Sila isi nama pelajar.", "error"); return; }
+
+    const fields = { PB1:[0,15], PB2:[0,15], PB3:[0,15], PB4:[0,15], PB5:[0,10], FA:[0,30] };
+    const vals   = {
+        PB1: document.getElementById("edit-pb1").value,
+        PB2: document.getElementById("edit-pb2").value,
+        PB3: document.getElementById("edit-pb3").value,
+        PB4: document.getElementById("edit-pb4").value,
+        PB5: document.getElementById("edit-pb5").value,
+        FA:  document.getElementById("edit-fa").value,
+    };
+
+    for (const [k, [mn, mx]] of Object.entries(fields)) {
+        if (vals[k] !== "") {
+            const v = parseFloat(vals[k]);
+            if (isNaN(v) || v < mn || v > mx) {
+                showToast(`Markah ${k} mesti antara ${mn}–${mx}.`, "error"); return;
+            }
+        }
+    }
+
+    s.name = name;
+    for (const [k] of Object.entries(fields)) {
+        s.marks[k] = vals[k] !== "" ? parseFloat(vals[k]) : null;
+    }
+
+    saveData();
+    closeModal("editModal");
+    renderStats();
+    renderTable();
+    showToast("✅ Markah berjaya disimpan!");
+}
+
+function openAddModal() {
+    document.getElementById("new-name").value = "";
+    document.getElementById("addModal").classList.add("open");
+}
+
+function addStudent() {
+    const name = document.getElementById("new-name").value.trim();
+    if (!name) { showToast("Sila masukkan nama pelajar.", "error"); return; }
+    const newId = STUDENTS.length > 0 ? Math.max(...STUDENTS.map(s=>s.id)) + 1 : 1;
+    STUDENTS.push({ id: newId, name, marks: { PB1:null, PB2:null, PB3:null, PB4:null, PB5:null, FA:null } });
+    saveData();
+    closeModal("addModal");
+    renderStats();
+    renderTable();
+    showToast("✅ Pelajar berjaya ditambah!");
+}
+
+function deleteStudent(id) {
+    const s = STUDENTS.find(x => x.id === id);
+    if (!s) return;
+    if (!confirm(`Padam rekod "${s.name}"? Tindakan ini tidak boleh diundur.`)) return;
+    const idx = STUDENTS.indexOf(s);
+    STUDENTS.splice(idx, 1);
+    saveData();
+    renderStats();
+    renderTable();
+    showToast("🗑 Rekod pelajar dipadamkan.", "error");
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove("open");
+}
+
+function exportCSV() {
+    const headers = ["Bil","Nama","PB1","PB2","PB3","PB4","PB5","CA","FA","Jumlah","Status CA","Status FA","Status Keseluruhan"];
+    const rows = STUDENTS.map((s, i) => {
+        const ca = calcCA(s.marks);
+        const total = calcTotal(s.marks);
+        return [
+            i+1, `"${s.name}"`,
+            s.marks.PB1??'', s.marks.PB2??'', s.marks.PB3??'', s.marks.PB4??'', s.marks.PB5??'',
+            ca??'', s.marks.FA??'', total??'',
+            caStatus(s.marks), faStatus(s.marks), overallStatus(s.marks)
+        ].join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = "STM31733_S12627_Markah.csv"; a.click();
+    URL.revokeObjectURL(url);
+    showToast("⬇ Fail CSV berjaya dieksport!");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM31733 – Dashboard Utama</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="course-code">STM31733</div>
+      <div class="course-name">Network Administration</div>
+      <span class="class-badge">📚 Kelas S12627</span>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-section-title">Menu</div>
+      <a href="index.html"       class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="topics.html"      class="nav-item"><span class="icon">📚</span> Topik</a>
+      <a href="assessments.html" class="nav-item"><span class="icon">📋</span> Penilaian</a>
+      <a href="students.html"    class="nav-item"><span class="icon">👥</span> Pelajar</a>
+      <a href="reports.html"     class="nav-item"><span class="icon">📈</span> Laporan</a>
+    </nav>
+    <div class="sidebar-footer">
+      Nurliana Binti Musa<br>Sem 3 / Tahun 2 · 2025/2026
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Dashboard Pengurusan P&P</div>
+        <div class="topbar-sub" id="topbar-date"></div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- STAT CARDS -->
+      <div class="stat-grid" id="stat-grid"></div>
+
+      <!-- ROW 1: Progress Topik & Status PB -->
+      <div class="grid-2 mb-4">
+
+        <!-- Progress Topik -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📚 Progress Topik</h3>
+            <a href="topics.html" class="btn btn-outline btn-sm">Lihat Semua</a>
+          </div>
+          <div class="card-body" id="topic-progress"></div>
+        </div>
+
+        <!-- Status Penilaian -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📋 Status Penilaian Berterusan</h3>
+            <a href="assessments.html" class="btn btn-outline btn-sm">Lihat Semua</a>
+          </div>
+          <div class="card-body" id="pb-status"></div>
+        </div>
+
+      </div>
+
+      <!-- ROW 2: CLO Attainment & Carta Pelajar -->
+      <div class="grid-2 mb-4">
+
+        <!-- CLO Attainment -->
+        <div class="card">
+          <div class="card-header"><h3>🎯 CLO Attainment</h3></div>
+          <div class="card-body" id="clo-attainment"></div>
+        </div>
+
+        <!-- Carta Status Pelajar -->
+        <div class="card">
+          <div class="card-header"><h3>👥 Taburan Prestasi Pelajar</h3></div>
+          <div class="card-body">
+            <div class="chart-container" style="height:200px">
+              <canvas id="studentChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW 3: Pelajar Berisiko -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>⚠️ Pelajar Memerlukan Perhatian</h3>
+          <a href="students.html" class="btn btn-outline btn-sm">Rekod Lengkap</a>
+        </div>
+        <div class="card-body p0">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Nama Pelajar</th>
+                  <th class="center">PB1</th><th class="center">PB2</th>
+                  <th class="center">PB3</th><th class="center">PB4</th>
+                  <th class="center">PB5</th><th class="center">CA</th>
+                  <th class="center">Status CA</th>
+                </tr>
+              </thead>
+              <tbody id="risk-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+function pageInit() {
+    setActiveNav();
+
+    // Tarikh
+    const now = new Date();
+    document.getElementById("topbar-date").textContent =
+        now.toLocaleDateString("ms-MY", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+
+    // ---- STAT CARDS ----
+    const totalStudents = STUDENTS.length;
+    const lulusCA   = STUDENTS.filter(s => caStatus(s.marks) === "lulus").length;
+    const gagalCA   = STUDENTS.filter(s => caStatus(s.marks) === "gagal").length;
+    const berisiko  = STUDENTS.filter(s => riskStatus(s.marks)).length;
+    const topikDone = TOPICS.filter(t => t.status === "selesai").length;
+    const pbDone    = ASSESSMENTS.filter(a => a.status === "selesai").length;
+
+    document.getElementById("stat-grid").innerHTML = `
+      <div class="stat-card blue">
+        <div class="stat-label">Jumlah Pelajar</div>
+        <div class="stat-value">${totalStudents}</div>
+        <div class="stat-sub">Kelas S12627</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Lulus CA</div>
+        <div class="stat-value">${lulusCA}</div>
+        <div class="stat-sub">≥ 28 / 70 markah</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Gagal CA</div>
+        <div class="stat-value">${gagalCA}</div>
+        <div class="stat-sub">< 28 / 70 markah</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Pelajar Berisiko</div>
+        <div class="stat-value">${berisiko}</div>
+        <div class="stat-sub">Perlu perhatian</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-label">Topik Selesai</div>
+        <div class="stat-value">${topikDone}/4</div>
+        <div class="stat-sub">Topik kursus</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-label">PB Selesai</div>
+        <div class="stat-value">${pbDone}/5</div>
+        <div class="stat-sub">Penilaian berterusan</div>
+      </div>
+    `;
+
+    // ---- PROGRESS TOPIK ----
+    const topicHTML = TOPICS.map(t => `
+      <div style="margin-bottom:14px">
+        <div class="flex justify-between items-center mb-1 gap-2">
+          <div>
+            <span style="font-size:12px;font-weight:700;color:var(--primary)">Topik ${t.no}</span>
+            <span style="font-size:12px;color:var(--text);margin-left:6px">${t.title}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            ${statusBadge(t.status)}
+            <span style="font-size:11px;color:var(--muted)">${t.weeks}</span>
+          </div>
+        </div>
+        ${progressBar(t.progress)}
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;text-align:right">${t.progress}%</div>
+      </div>
+    `).join("");
+    document.getElementById("topic-progress").innerHTML = topicHTML;
+
+    // ---- STATUS PB ----
+    const pbHTML = ASSESSMENTS.map(a => {
+        const submitted = assessmentSubmittedCount(a.id);
+        const pct = (submitted / STUDENTS.length) * 100;
+        return `
+          <div style="margin-bottom:12px">
+            <div class="flex justify-between items-center mb-1 gap-2">
+              <div>
+                <span style="font-size:12px;font-weight:700">${a.id}</span>
+                <span style="font-size:12px;color:var(--muted);margin-left:6px">${a.name}</span>
+                <span style="font-size:11px;color:var(--muted);margin-left:4px">(${a.weight}%)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                ${pbStatusBadge(a.status)}
+                <span style="font-size:11px;color:var(--muted)">${submitted}/${STUDENTS.length}</span>
+              </div>
+            </div>
+            ${progressBar(pct)}
+          </div>
+        `;
+    }).join("");
+    document.getElementById("pb-status").innerHTML = pbHTML;
+
+    // ---- CLO ATTAINMENT ----
+    const clo = calcCLOAttainment();
+    const cloColors = { CLO1: "#1a56a0", CLO2: "#2e7d32", CLO3: "#e65100" };
+    const cloDefs = {
+        CLO1: "Identify concepts of network administration",
+        CLO2: "Implement basic configuration for network devices",
+        CLO3: "Perform group discussion in network monitoring",
+    };
+    let cloHTML = "";
+    for (const [c, pct] of Object.entries(clo)) {
+        const v = pct !== null ? pct : 0;
+        const label = pct !== null ? v + "%" : "Tiada data";
+        const c2 = v >= 70 ? "green" : v >= 40 ? "amber" : "red";
+        cloHTML += `
+          <div class="clo-row">
+            <span class="clo-label" style="color:${cloColors[c]}">${c}</span>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${cloDefs[c]}</div>
+              <div class="clo-bar-wrap">
+                <div class="clo-bar-fill ${c2}" style="width:${v}%;background:${cloColors[c]}"></div>
+              </div>
+            </div>
+            <span class="clo-pct">${label}</span>
+          </div>
+        `;
+    }
+    if (!cloHTML) cloHTML = '<div class="text-muted">Belum ada markah dimasukkan.</div>';
+    document.getElementById("clo-attainment").innerHTML = cloHTML;
+
+    // ---- CARTA PELAJAR ----
+    const lulus  = STUDENTS.filter(s => overallStatus(s.marks) === "lulus").length;
+    const gagal  = STUDENTS.filter(s => overallStatus(s.marks) === "gagal").length;
+    const blm    = STUDENTS.filter(s => overallStatus(s.marks) === "belum").length;
+    new Chart(document.getElementById("studentChart"), {
+        type: "doughnut",
+        data: {
+            labels: ["Lulus", "Gagal", "Belum Lengkap"],
+            datasets: [{ data: [lulus, gagal, blm], backgroundColor: ["#16a34a","#dc2626","#94a3b8"], borderWidth: 2 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: "bottom", labels: { font: { size: 12 } } }
+            }
+        }
+    });
+
+    // ---- RISK TABLE ----
+    const maxCA = [15,15,15,15,10];
+    const pbKeys = ["PB1","PB2","PB3","PB4","PB5"];
+    const riskStudents = STUDENTS.filter(s => riskStatus(s.marks) || caStatus(s.marks) === "gagal");
+    if (riskStudents.length === 0) {
+        document.getElementById("risk-table").innerHTML =
+            `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">✅ Tiada pelajar berisiko setakat ini.</td></tr>`;
+    } else {
+        document.getElementById("risk-table").innerHTML = riskStudents.map((s, i) => {
+            const ca = calcCA(s.marks);
+            const caS = caStatus(s.marks);
+            return `<tr>
+              <td>${i+1}</td>
+              <td><strong>${s.name}</strong></td>
+              ${pbKeys.map((k,j) => {
+                const v = s.marks[k];
+                const style = v !== null ? markColor(v, maxCA[j]) : "color:var(--muted)";
+                return `<td class="center" style="${style}">${v !== null ? v : '—'}</td>`;
+              }).join("")}
+              <td class="center" style="${caS==='gagal'?'color:#dc2626;font-weight:700':'font-weight:700'}">${ca !== null ? ca : '—'}</td>
+              <td class="center">${caS === "gagal" ? '<span class="badge badge-danger">Gagal</span>' : '<span class="badge badge-warning">Berisiko</span>'}</td>
+            </tr>`;
+        }).join("");
+    }
+}
+</script>
+</body>
+</html>
