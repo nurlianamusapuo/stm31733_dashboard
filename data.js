@@ -29,8 +29,8 @@ const TOPICS = [
         ],
         weeks: "Minggu 1 – 3",
         clo: "CLO 1",
-        status: "selesai",
-        progress: 100
+        status: "belum",
+        progress: 0
     },
     {
         id: "T2",
@@ -43,8 +43,8 @@ const TOPICS = [
         ],
         weeks: "Minggu 4 – 6",
         clo: "CLO 1",
-        status: "selesai",
-        progress: 100
+        status: "belum",
+        progress: 0
     },
     {
         id: "T3",
@@ -108,7 +108,7 @@ const STUDENTS = [
 ];
 
 // Versi data — naik nombor apabila format data berubah
-const DATA_VERSION = "2";
+const DATA_VERSION = "3";
 
 // Simpan & muat data dari localStorage
 function saveData() {
