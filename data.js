@@ -22,14 +22,14 @@ const TOPICS = [
         no: 1,
         title: "Introduction to Network Administration",
         subtopics: [
-            "1.1 Apply basic knowledge of network administration",
-            "1.2 Roles & responsibilities of Network Administrator",
-            "1.3 Functions of Network Operating Center (NOC)",
-            "1.4 Best practices in network administration"
+            { text: "1.1 Apply basic knowledge of network administration",   checked: false },
+            { text: "1.2 Roles & responsibilities of Network Administrator", checked: false },
+            { text: "1.3 Functions of Network Operating Center (NOC)",       checked: false },
+            { text: "1.4 Best practices in network administration",          checked: false }
         ],
         weeks: "Minggu 1 – 3",
         clo: "CLO 1",
-        status: "selesai",   // selesai | sedang | belum
+        status: "selesai",
         progress: 100
     },
     {
@@ -37,9 +37,9 @@ const TOPICS = [
         no: 2,
         title: "Fundamentals of Network Devices",
         subtopics: [
-            "2.1 Virtual LAN (VLAN) concept",
-            "2.2 Basic routing protocols (Static & Dynamic)",
-            "2.3 Server types and Network Operating System (NOS)"
+            { text: "2.1 Virtual LAN (VLAN) concept",                                 checked: false },
+            { text: "2.2 Basic routing protocols (Static & Dynamic)",                 checked: false },
+            { text: "2.3 Server types and Network Operating System (NOS)",            checked: false }
         ],
         weeks: "Minggu 4 – 6",
         clo: "CLO 1",
@@ -51,26 +51,26 @@ const TOPICS = [
         no: 3,
         title: "Network Configuration",
         subtopics: [
-            "3.1 Initial network device configuration (Switch & Router)",
-            "3.2 VLAN and Trunking configuration",
-            "3.3 Network routing (Static & RIPv2)",
-            "3.4 DHCP configuration",
-            "3.5 DNS configuration",
-            "3.6 Basic network troubleshooting"
+            { text: "3.1 Initial network device configuration (Switch & Router)", checked: false },
+            { text: "3.2 VLAN and Trunking configuration",                        checked: false },
+            { text: "3.3 Network routing (Static & RIPv2)",                       checked: false },
+            { text: "3.4 DHCP configuration",                                     checked: false },
+            { text: "3.5 DNS configuration",                                      checked: false },
+            { text: "3.6 Basic network troubleshooting",                          checked: false }
         ],
         weeks: "Minggu 7 – 10",
         clo: "CLO 2",
         status: "sedang",
-        progress: 60
+        progress: 0
     },
     {
         id: "T4",
         no: 4,
         title: "Network Monitor",
         subtopics: [
-            "4.1 Concept of network monitoring",
-            "4.2 Network monitoring protocols (SNMP, NetFlow, SSH)",
-            "4.3 Network monitoring tools (install, configure, report)"
+            { text: "4.1 Concept of network monitoring",                              checked: false },
+            { text: "4.2 Network monitoring protocols (SNMP, NetFlow, SSH)",          checked: false },
+            { text: "4.3 Network monitoring tools (install, configure, report)",      checked: false }
         ],
         weeks: "Minggu 11 – 13",
         clo: "CLO 3",
@@ -118,7 +118,16 @@ function loadData() {
     const t = localStorage.getItem("stm31733_topics");
     const a = localStorage.getItem("stm31733_assessments");
     const s = localStorage.getItem("stm31733_students");
-    if (t) TOPICS.splice(0, TOPICS.length, ...JSON.parse(t));
+    if (t) {
+        const parsed = JSON.parse(t);
+        // Migration: tukar subtopics string lama kepada objek {text, checked}
+        parsed.forEach(topic => {
+            if (topic.subtopics && topic.subtopics.length > 0 && typeof topic.subtopics[0] === "string") {
+                topic.subtopics = topic.subtopics.map(st => ({ text: st, checked: false }));
+            }
+        });
+        TOPICS.splice(0, TOPICS.length, ...parsed);
+    }
     if (a) ASSESSMENTS.splice(0, ASSESSMENTS.length, ...JSON.parse(a));
     if (s) STUDENTS.splice(0, STUDENTS.length, ...JSON.parse(s));
 }
