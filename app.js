@@ -5,8 +5,20 @@
 // Panggil loadData() di setiap halaman semasa muat
 document.addEventListener("DOMContentLoaded", () => {
     loadData();
+    setSidebarInfo();
     if (typeof pageInit === "function") pageInit();
 });
+
+// ---- Isi maklumat sidebar dari COURSE_INFO ----
+function setSidebarInfo() {
+    const el = document.getElementById("sf-info");
+    if (!el) return;
+    el.innerHTML = `
+      <div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Pensyarah Kursus</div>
+      <div style="color:rgba(255,255,255,0.85);font-weight:600;font-size:11.5px">${COURSE_INFO.lecturer}</div>
+      <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:3px">${COURSE_INFO.class} · ${COURSE_INFO.semester}</div>
+    `;
+}
 
 // ---- Status helpers ----
 function statusBadge(status) {

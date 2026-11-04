@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM31733 – Jadual Akademik</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* Schedule-specific styles */
+.week-row {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+.week-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.week-row.current { border: 2px solid var(--primary); box-shadow: 0 0 0 3px rgba(26,86,160,0.1); }
+.week-row.overdue { border-color: var(--danger); }
+.week-row.break-week { border-color: #7c3aed; background: #faf5ff; }
+.week-row.done { border-color: var(--success); background: #f0fdf4; }
+
+.week-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    flex-wrap: wrap;
+}
+.week-num {
+    font-size: 12px;
+    font-weight: 800;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+    background: var(--muted);
+}
+.week-row.current  .week-num { background: var(--primary); }
+.week-row.done     .week-num { background: var(--success); }
+.week-row.overdue  .week-num { background: var(--danger); }
+.week-row.break-week .week-num { background: #7c3aed; }
+
+.week-dates {
+    font-size: 11.5px;
+    color: var(--muted);
+    flex-shrink: 0;
+}
+.week-topics-pill {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+.week-status {
+    font-size: 11.5px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.week-body {
+    padding: 0 14px 12px;
+    display: none;
+}
+.week-body.open { display: block; }
+
+.day-section {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+.day-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    width: 70px;
+    text-align: center;
+    margin-top: 2px;
+}
+.day-label.tuesday { background: #1a56a0; }
+.day-label.friday  { background: #2e7d32; }
+
+.slot-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.slot-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #f8fafc;
+}
+.slot-item.pb-slot {
+    background: #fef9c3;
+    font-weight: 600;
+}
+.slot-hours {
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 30px;
+    text-align: right;
+}
+
+/* Input form */
+.config-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+/* Progress overview */
+.week-progress-bar {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 4px;
+    min-width: 80px;
+}
+.week-progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.3s;
+}
+
+/* Timeline strip */
+.timeline-strip {
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 0 4px;
+}
+.timeline-cell {
+    min-width: 48px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    cursor: pointer;
+    opacity: 0.9;
+    transition: opacity 0.15s, transform 0.1s;
+}
+.timeline-cell:hover { opacity: 1; transform: scaleY(1.1); }
+.timeline-cell.cell-done    { background: var(--success); }
+.timeline-cell.cell-current { background: var(--primary); border: 2px solid #fff; box-shadow: 0 0 0 2px var(--primary); }
+.timeline-cell.cell-overdue { background: var(--danger); }
+.timeline-cell.cell-future  { background: #94a3b8; }
+.timeline-cell.cell-break   { background: #7c3aed; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="KKGPP.png" alt="Logo KKGPP" style="width:72px;height:auto;display:block;margin:0 auto 8px;border-radius:6px;background:#fff;padding:3px">
+      <div class="course-code">STM31733</div>
+      <div class="course-name">Network Administration</div>
+      <span class="class-badge">📚 Kelas S12627</span>
+    </div>
+    <nav class="nav-section">
+      <div class="nav-section-title">Menu</div>
+      <a href="index.html"       class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="topics.html"      class="nav-item"><span class="icon">📚</span> Topik</a>
+      <a href="assessments.html" class="nav-item"><span class="icon">📋</span> Penilaian</a>
+      <a href="students.html"    class="nav-item"><span class="icon">👥</span> Pelajar</a>
+      <a href="schedule.html"    class="nav-item"><span class="icon">📅</span> Jadual</a>
+      <a href="reports.html"     class="nav-item"><span class="icon">📈</span> Laporan</a>
+    </nav>
+    <div class="sidebar-footer" id="sf-info"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">📅 Jadual Akademik</div>
+        <div class="topbar-sub">Selasa (2j) + Jumaat (3j) = 5j/minggu × 14 Minggu</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- CONFIG FORM -->
+      <div class="card mb-5">
+        <div class="card-header"><h3>⚙️ Tetapan Semester</h3></div>
+        <div class="card-body">
+          <div class="config-form">
+            <div class="form-group" style="margin:0">
+              <label>📅 Tarikh Selasa Pertama Semester</label>
+              <input type="date" id="cfg-first-tuesday">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>🏖️ Tarikh Selasa Minggu Cuti Pertengahan</label>
+              <input type="date" id="cfg-break-start">
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">Kosongkan jika tiada cuti</div>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>🏖️ Bilangan Minggu Cuti</label>
+              <select id="cfg-break-weeks">
+                <option value="1">1 minggu</option>
+                <option value="2">2 minggu</option>
+                <option value="3">3 minggu</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn btn-primary w-full" onclick="applyConfig()">✅ Jana Jadual</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLACEHOLDER -->
+      <div id="schedule-placeholder" class="card mb-4" style="display:none">
+        <div class="card-body" style="text-align:center;padding:32px;color:var(--muted)">
+          <div style="font-size:32px;margin-bottom:8px">📅</div>
+          <div style="font-weight:600">Masukkan tarikh semester dan klik Jana Jadual</div>
+        </div>
+      </div>
+
+      <!-- SUMMARY STATS -->
+      <div class="stat-grid mb-4" id="sched-stats" style="display:none"></div>
+
+      <!-- TIMELINE STRIP -->
+      <div class="card mb-4" id="timeline-card" style="display:none">
+        <div class="card-header"><h3>📊 Gambaran Keseluruhan 14 Minggu</h3></div>
+        <div class="card-body">
+          <div class="timeline-strip" id="timeline-strip"></div>
+          <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap">
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:var(--success);display:inline-block"></span>Selesai</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:var(--primary);display:inline-block"></span>Minggu Ini</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:var(--danger);display:inline-block"></span>Tertunggak</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:#94a3b8;display:inline-block"></span>Akan Datang</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:#7c3aed;display:inline-block"></span>Cuti</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- WEEK ROWS -->
+      <div id="week-list"></div>
+
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+let schedWeeks = [];
+let schedAlloc = [];
+let schedGrouped = [];
+
+function pageInit() {
+    setActiveNav();
+    // Load config yang ada
+    const cfg = getScheduleConfig();
+    if (cfg.firstTuesday) {
+        document.getElementById("cfg-first-tuesday").value = cfg.firstTuesday;
+        document.getElementById("cfg-break-start").value   = cfg.midtermBreakWeek || "";
+        document.getElementById("cfg-break-weeks").value   = cfg.midtermBreakWeeks || 1;
+        renderSchedule(cfg);
+    } else {
+        document.getElementById("schedule-placeholder").style.display = "block";
+    }
+}
+
+function applyConfig() {
+    const firstTuesday     = document.getElementById("cfg-first-tuesday").value;
+    const midtermBreakWeek = document.getElementById("cfg-break-start").value;
+    const midtermBreakWeeks = document.getElementById("cfg-break-weeks").value;
+
+    if (!firstTuesday) { showToast("Sila masukkan tarikh Selasa pertama semester.", "error"); return; }
+
+    // Pastikan hari yang dipilih adalah Selasa (day=2)
+    const d = new Date(firstTuesday + "T00:00:00");
+    if (d.getDay() !== 2) {
+        showToast("Tarikh yang dipilih bukan hari Selasa. Sila pilih semula.", "error"); return;
+    }
+
+    const cfg = { firstTuesday, midtermBreakWeek, midtermBreakWeeks: parseInt(midtermBreakWeeks) };
+    saveScheduleConfig(cfg);
+    document.getElementById("schedule-placeholder").style.display = "none";
+    renderSchedule(cfg);
+    showToast("✅ Jadual berjaya dijana!");
+}
+
+function renderSchedule(cfg) {
+    schedWeeks   = generateAcademicWeeks(cfg.firstTuesday, cfg.midtermBreakWeek, cfg.midtermBreakWeeks);
+    schedAlloc   = allocateSchedule(schedWeeks);
+    schedGrouped = groupAllocationByWeek(schedWeeks, schedAlloc);
+
+    renderStats();
+    renderTimeline();
+    renderWeekList();
+
+    document.getElementById("sched-stats").style.display   = "";
+    document.getElementById("timeline-card").style.display = "";
+}
+
+// Tentukan status minggu
+function getWeekStatus(wg) {
+    if (wg.isBreak) return "break";
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const tue = new Date(wg.tuesday + "T00:00:00");
+    const fri = new Date(wg.friday  + "T00:00:00");
+    const endOfWeek = new Date(fri.getTime() + 86400000); // Sabtu
+
+    // Semak subtopik dalam minggu ini — adakah semua checked?
+    const checkedCount = wg.subtopicRefs.filter(ref => {
+        const stIdx = SUBTOPIC_SCHEDULE.findIndex(s => s.ref === ref);
+        if (stIdx < 0) return false;
+        // Cari dalam TOPICS
+        const st = SUBTOPIC_SCHEDULE[stIdx];
+        const topic = TOPICS.find(t => t.id === st.topicId);
+        if (!topic) return false;
+        // Cari index subtopik dalam topic
+        const subIdx = topic.subtopics.findIndex(s => s.text.startsWith(ref.split(".")[1] + ".") ||
+            s.text.includes(st.label.substring(0, 20)));
+        return subIdx >= 0 ? topic.subtopics[subIdx].checked : false;
+    });
+
+    const allChecked = wg.subtopicRefs.length > 0 && checkedCount === wg.subtopicRefs.length;
+
+    if (allChecked) return "done";
+    if (today >= tue && today < endOfWeek) return "current";
+    if (today >= endOfWeek) return "overdue";
+    return "future";
+}
+
+// Semak subtopik tick status lebih tepat
+function isSubtopicChecked(ref) {
+    const st = SUBTOPIC_SCHEDULE.find(s => s.ref === ref);
+    if (!st) return false;
+    const topic = TOPICS.find(t => t.id === st.topicId);
+    if (!topic) return false;
+    // Match label
+    const sub = topic.subtopics.find(s => s.text.trim().startsWith(ref.replace("T","").split(".")[1] + ".") ||
+        s.text.trim() === st.label.trim());
+    return sub ? sub.checked : false;
+}
+
+function renderStats() {
+    const done    = schedGrouped.filter(w => !w.isBreak && getWeekStatus(w) === "done").length;
+    const current = schedGrouped.filter(w => !w.isBreak && getWeekStatus(w) === "current").length;
+    const overdue = schedGrouped.filter(w => !w.isBreak && getWeekStatus(w) === "overdue").length;
+    const future  = schedGrouped.filter(w => !w.isBreak && getWeekStatus(w) === "future").length;
+
+    // Minggu semasa
+    const curWeek = schedGrouped.find(w => getWeekStatus(w) === "current");
+    const curLabel = curWeek ? "Minggu " + curWeek.acWeek : "—";
+
+    document.getElementById("sched-stats").innerHTML = `
+      <div class="stat-card blue"><div class="stat-label">Minggu Semasa</div><div class="stat-value">${curLabel}</div></div>
+      <div class="stat-card green"><div class="stat-label">Minggu Selesai</div><div class="stat-value">${done}/14</div><div class="stat-sub">Semua subtopik ditick</div></div>
+      <div class="stat-card red"><div class="stat-label">Tertunggak</div><div class="stat-value">${overdue}</div><div class="stat-sub">Minggu lepas, belum selesai</div></div>
+      <div class="stat-card teal"><div class="stat-label">Akan Datang</div><div class="stat-value">${future}</div><div class="stat-sub">Minggu hadapan</div></div>
+    `;
+}
+
+function renderTimeline() {
+    const colorMap = { done:"cell-done", current:"cell-current", overdue:"cell-overdue", future:"cell-future", break:"cell-break" };
+    document.getElementById("timeline-strip").innerHTML = schedGrouped.map(wg => {
+        const status = getWeekStatus(wg);
+        const cls    = colorMap[status] || "cell-future";
+        const label  = wg.isBreak ? "Cuti" : "M" + wg.acWeek;
+        const dateStr = formatDate(wg.tuesday, "short");
+        return `<div class="timeline-cell ${cls}" title="${wg.isBreak ? 'Cuti Pertengahan' : 'Minggu '+wg.acWeek+' ('+dateStr+')'}" onclick="scrollToWeek(${wg.calWeek-1})">
+          <div>${label}</div>
+        </div>`;
+    }).join("");
+}
+
+function scrollToWeek(idx) {
+    const el = document.getElementById("week-row-" + idx);
+    if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.querySelector(".week-body").classList.add("open");
+    }
+}
+
+function renderWeekList() {
+    const topicColor = { T1:"#1a56a0", T2:"#2e7d32", T3:"#e65100", T4:"#7c3aed" };
+    const pbColor    = { PB1:"#1a56a0", PB2:"#2e7d32", PB3:"#2e7d32", PB4:"#2e7d32", PB5:"#e65100" };
+    const statusMap  = {
+        done:    { cls:"done",       icon:"✅", label:"Selesai",       color:"var(--success)" },
+        current: { cls:"current",    icon:"🔄", label:"Minggu Ini",    color:"var(--primary)" },
+        overdue: { cls:"overdue",    icon:"⚠️", label:"Tertunggak",    color:"var(--danger)"  },
+        future:  { cls:"",           icon:"⏳", label:"Akan Datang",   color:"var(--muted)"   },
+        break:   { cls:"break-week", icon:"🏖️", label:"Cuti",          color:"#7c3aed"        },
+    };
+
+    document.getElementById("week-list").innerHTML = schedGrouped.map((wg, i) => {
+        const status = getWeekStatus(wg);
+        const sm     = statusMap[status] || statusMap.future;
+
+        if (wg.isBreak) {
+            return `
+            <div class="week-row break-week" id="week-row-${i}">
+              <div class="week-header" onclick="toggleWeek(${i})">
+                <div class="week-num">🏖</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#7c3aed">Cuti Pertengahan Semester</div>
+                  <div class="week-dates">${formatDate(wg.tuesday)} – ${formatDate(wg.friday)}</div>
+                </div>
+                <span class="badge" style="background:#ede9fe;color:#7c3aed;margin-left:auto">🏖️ Cuti</span>
+              </div>
+            </div>`;
+        }
+
+        // Kumpul items ikut hari
+        const tuesdayItems = wg.items.filter(it => it.day === "tuesday");
+        const fridayItems  = wg.items.filter(it => it.day === "friday");
+
+        const renderItems = (items) => items.map(it => {
+            const isPB   = it.type === "pb";
+            const color  = isPB ? (pbColor[it.ref] || "#1a56a0") : (topicColor[SUBTOPIC_SCHEDULE.find(s=>s.ref===it.ref)?.topicId] || "#1a56a0");
+            const checked = it.type === "subtopic" ? isSubtopicChecked(it.ref) : calcPBStatus(it.ref) === "selesai";
+            return `<div class="slot-item ${isPB ? 'pb-slot' : ''}">
+              <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block"></span>
+              <span style="${checked ? 'text-decoration:line-through;color:var(--muted)' : ''}">${it.label}</span>
+              ${isPB ? '<span class="badge badge-warning" style="font-size:10px;padding:1px 5px">PB</span>' : ''}
+              <span class="slot-hours">${it.hours}j</span>
+            </div>`;
+        }).join("");
+
+        // Pill topik & PB
+        const pills = [
+            ...wg.topicIds.map(tid => `<span class="badge badge-primary" style="font-size:10px">${tid}</span>`),
+            ...wg.pbRefs.map(pb  => `<span class="badge badge-warning"  style="font-size:10px">${pb}</span>`),
+        ].join("");
+
+        // Progress subtopik
+        const totalST   = wg.subtopicRefs.length;
+        const checkedST = wg.subtopicRefs.filter(r => isSubtopicChecked(r)).length;
+        const pct       = totalST > 0 ? Math.round((checkedST/totalST)*100) : 0;
+
+        return `
+        <div class="week-row ${sm.cls}" id="week-row-${i}">
+          <div class="week-header" onclick="toggleWeek(${i})">
+            <div class="week-num">${wg.acWeek}</div>
+            <div style="min-width:160px">
+              <div style="font-size:13px;font-weight:700">${wg.label}</div>
+              <div class="week-dates">${formatDate(wg.tuesday)} (Sel) &nbsp;·&nbsp; ${formatDate(wg.friday)} (Jum)</div>
+              ${totalST > 0 ? `<div class="week-progress-bar" style="margin-top:4px"><div class="week-progress-fill" style="width:${pct}%;background:${sm.color}"></div></div>` : ""}
+            </div>
+            <div class="week-topics-pill">${pills}</div>
+            <div class="week-status" style="color:${sm.color}">${sm.icon} ${sm.label}</div>
+            <span style="font-size:11px;color:var(--muted);margin-left:6px">▾</span>
+          </div>
+          <div class="week-body" id="week-body-${i}">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">📅 SELASA · ${formatDate(wg.tuesday)} (2j)</div>
+                <div class="slot-list">${tuesdayItems.length ? renderItems(tuesdayItems) : '<div class="text-muted" style="font-size:12px">—</div>'}</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">📅 JUMAAT · ${formatDate(wg.friday)} (3j)</div>
+                <div class="slot-list">${fridayItems.length ? renderItems(fridayItems) : '<div class="text-muted" style="font-size:12px">—</div>'}</div>
+              </div>
+            </div>
+            ${totalST > 0 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:right">Subtopik selesai: ${checkedST}/${totalST} (${pct}%) — tandakan dalam <a href="topics.html" style="color:var(--primary)">halaman Topik</a></div>` : ""}
+          </div>
+        </div>`;
+    }).join("");
+
+    // Auto-buka minggu semasa
+    const curIdx = schedGrouped.findIndex(w => getWeekStatus(w) === "current");
+    if (curIdx >= 0) {
+        const body = document.getElementById("week-body-" + curIdx);
+        if (body) body.classList.add("open");
+    }
+}
+
+function toggleWeek(i) {
+    const body = document.getElementById("week-body-" + i);
+    if (body) body.classList.toggle("open");
+}
+
+function formatDate(dateStr, mode) {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr + "T00:00:00");
+    if (mode === "short") return d.toLocaleDateString("ms-MY", { day:"numeric", month:"short" });
+    return d.toLocaleDateString("ms-MY", { day:"numeric", month:"long", year:"numeric" });
+}
+</script>
+</body>
+</html>

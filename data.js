@@ -6,9 +6,10 @@
 const COURSE_INFO = {
     code: "STM31733",
     name: "Network Administration",
-    lecturer: "Nurliana Binti Musa",
-    class: "S12627",
-    semester: "Semester 3 / Tahun 2",
+    lecturer: "Nurliana binti Musa",
+    class: "STM 3",
+    semester: "Sesi 1 2026/2027",
+    classCode: "S12627",
     totalStudents: 15,
     caWeight: 70,
     faWeight: 30,
@@ -281,4 +282,163 @@ function startAutoRefresh(onSuccess, onError) {
     setInterval(() => {
         fetchFromGoogleSheets(onSuccess, onError);
     }, 5 * 60 * 1000); // 5 minit
+}
+
+// ============================================================
+// JADUAL AKADEMIK
+// Kelas Selasa (2j) + Jumaat (3j) = 5j/minggu × 14 minggu = 70j
+// ============================================================
+
+// Tetapan jadual — pengguna boleh edit
+const SCHEDULE_CONFIG_KEY = "stm31733_schedule_config";
+
+function getScheduleConfig() {
+    const saved = localStorage.getItem(SCHEDULE_CONFIG_KEY);
+    if (saved) return JSON.parse(saved);
+    return {
+        firstTuesday: "",      // YYYY-MM-DD — Selasa pertama semester
+        midtermBreakWeek: "",  // YYYY-MM-DD — Selasa minggu cuti pertengahan (boleh kosong)
+        midtermBreakWeeks: 1,  // Bilangan minggu cuti
+    };
+}
+
+function saveScheduleConfig(cfg) {
+    localStorage.setItem(SCHEDULE_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+// Definisi slot kelas per subtopik (dalam jam)
+// Setiap entry: { ref, label, hours, pbAfter }
+// pbAfter: penilaian yang diadakan SELEPAS subtopik ini (null jika tiada)
+const SUBTOPIC_SCHEDULE = [
+    { ref: "T1.1", topicId: "T1", label: "1.1 Apply basic knowledge of network administration",   hours: 1,   pbAfter: null },
+    { ref: "T1.2", topicId: "T1", label: "1.2 Roles & responsibilities of Network Administrator", hours: 1,   pbAfter: null },
+    { ref: "T1.3", topicId: "T1", label: "1.3 Functions of Network Operating Center (NOC)",       hours: 1,   pbAfter: null },
+    { ref: "T1.4", topicId: "T1", label: "1.4 Best practices in network administration",          hours: 1,   pbAfter: null },
+    { ref: "T2.1", topicId: "T2", label: "2.1 Virtual LAN (VLAN) concept",                        hours: 1,   pbAfter: null },
+    { ref: "T2.2", topicId: "T2", label: "2.2 Basic routing protocols (Static & Dynamic)",        hours: 1,   pbAfter: null },
+    { ref: "T2.3", topicId: "T2", label: "2.3 Server types and Network Operating System (NOS)",   hours: 1,   pbAfter: "PB1" },  // Test 1j selepas T2.3
+    { ref: "T3.1", topicId: "T3", label: "3.1 Initial network device configuration",              hours: 7.5, pbAfter: null },
+    { ref: "T3.2", topicId: "T3", label: "3.2 VLAN and Trunking configuration",                   hours: 8.5, pbAfter: "PB2" },  // Practical 1 (3j) selepas T3.2
+    { ref: "T3.3", topicId: "T3", label: "3.3 Network routing (Static & RIPv2)",                  hours: 8.5, pbAfter: "PB3" },  // Practical 2 (3j) selepas T3.3
+    { ref: "T3.4", topicId: "T3", label: "3.4 DHCP configuration",                               hours: 8.5, pbAfter: null },
+    { ref: "T3.5", topicId: "T3", label: "3.5 DNS configuration",                                hours: 8,   pbAfter: null },
+    { ref: "T3.6", topicId: "T3", label: "3.6 Basic network troubleshooting",                    hours: 6,   pbAfter: "PB4" },  // Practical 3 (3j) selepas T3.6
+    { ref: "T4.1", topicId: "T4", label: "4.1 Concept of network monitoring",                    hours: 0.5, pbAfter: null },
+    { ref: "T4.2", topicId: "T4", label: "4.2 Network monitoring protocols (SNMP, NetFlow, SSH)", hours: 0.5, pbAfter: null },
+    { ref: "T4.3", topicId: "T4", label: "4.3 Network monitoring tools",                         hours: 3,   pbAfter: "PB5" },  // Presentation (2j) selepas T4.3
+];
+
+// Jam penilaian
+const PB_HOURS = { PB1: 1, PB2: 3, PB3: 3, PB4: 3, PB5: 2 };
+
+// ---- Jana 14 minggu akademik ----
+// Setiap minggu ada 2 slot: Selasa (2j) dan Jumaat (3j)
+function generateAcademicWeeks(firstTuesdayStr, midtermBreakWeekStr, midtermBreakWeeks) {
+    if (!firstTuesdayStr) return [];
+
+    const weeks = [];
+    const msPerDay  = 86400000;
+    const msPerWeek = 7 * msPerDay;
+
+    let weekStart = new Date(firstTuesdayStr + "T00:00:00");
+    let breakStart = midtermBreakWeekStr ? new Date(midtermBreakWeekStr + "T00:00:00") : null;
+    const breakCount = parseInt(midtermBreakWeeks) || 1;
+
+    let academicWeek = 1;
+    let calendarWeek = 0;
+
+    while (academicWeek <= 14) {
+        const tuesday  = new Date(weekStart);
+        const friday   = new Date(weekStart.getTime() + 3 * msPerDay);
+        calendarWeek++;
+
+        // Semak sama ada minggu ini adalah cuti
+        const isBreak = breakStart &&
+            weekStart >= breakStart &&
+            weekStart < new Date(breakStart.getTime() + breakCount * msPerWeek);
+
+        if (isBreak) {
+            weeks.push({
+                calWeek: calendarWeek,
+                acWeek:  null,
+                tuesday: tuesday.toISOString().slice(0,10),
+                friday:  friday.toISOString().slice(0,10),
+                isBreak: true,
+                label:   "Cuti Pertengahan Semester"
+            });
+        } else {
+            weeks.push({
+                calWeek: calendarWeek,
+                acWeek:  academicWeek,
+                tuesday: tuesday.toISOString().slice(0,10),
+                friday:  friday.toISOString().slice(0,10),
+                isBreak: false,
+                label:   "Minggu " + academicWeek
+            });
+            academicWeek++;
+        }
+        weekStart = new Date(weekStart.getTime() + msPerWeek);
+    }
+    return weeks;
+}
+
+// ---- Agihkan subtopik & PB ke dalam slot minggu ----
+// Selasa = 2j, Jumaat = 3j
+function allocateSchedule(weeks) {
+    const slots = []; // { weekIdx, day, hoursAvail }
+    weeks.forEach((w, i) => {
+        if (!w.isBreak) {
+            slots.push({ weekIdx: i, day: "tuesday", date: w.tuesday, hoursLeft: 2 });
+            slots.push({ weekIdx: i, day: "friday",  date: w.friday,  hoursLeft: 3 });
+        }
+    });
+
+    const allocation = []; // { weekIdx, day, date, type, ref, label, hours }
+    let slotIdx = 0;
+
+    const addItem = (type, ref, label, hours) => {
+        let remaining = hours;
+        while (remaining > 0 && slotIdx < slots.length) {
+            const slot = slots[slotIdx];
+            const take = Math.min(remaining, slot.hoursLeft);
+            allocation.push({
+                weekIdx: slot.weekIdx,
+                day:     slot.day,
+                date:    slot.date,
+                type,     // "subtopic" | "pb"
+                ref,
+                label,
+                hours:   take,
+                partial: take < hours,
+            });
+            slot.hoursLeft -= take;
+            remaining      -= take;
+            if (slot.hoursLeft <= 0) slotIdx++;
+        }
+    };
+
+    SUBTOPIC_SCHEDULE.forEach(st => {
+        addItem("subtopic", st.ref, st.label, st.hours);
+        if (st.pbAfter) {
+            const pbName = ASSESSMENTS.find(a => a.id === st.pbAfter)?.name || st.pbAfter;
+            addItem("pb", st.pbAfter, pbName + " (" + st.pbAfter + ")", PB_HOURS[st.pbAfter] || 1);
+        }
+    });
+
+    return allocation;
+}
+
+// ---- Kumpulkan allocation ikut minggu ----
+function groupAllocationByWeek(weeks, allocation) {
+    return weeks.map((w, i) => {
+        const items = allocation.filter(a => a.weekIdx === i);
+        // Kira unik subtopik & topik dalam minggu ini
+        const subtopicRefs = [...new Set(items.filter(a=>a.type==="subtopic").map(a=>a.ref))];
+        const pbRefs       = [...new Set(items.filter(a=>a.type==="pb").map(a=>a.ref))];
+        const topicIds     = [...new Set(subtopicRefs.map(r => {
+            const st = SUBTOPIC_SCHEDULE.find(s=>s.ref===r);
+            return st ? st.topicId : null;
+        }).filter(Boolean))];
+        return { ...w, items, subtopicRefs, pbRefs, topicIds };
+    });
 }
