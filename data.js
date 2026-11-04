@@ -107,27 +107,32 @@ const STUDENTS = [
     { id: 15, name: "Zulaikha bt Mokhtar",         marks: { PB1: null, PB2: null, PB3: null, PB4: null, PB5: null, FA: null } },
 ];
 
+// Versi data — naik nombor apabila format data berubah
+const DATA_VERSION = "2";
+
 // Simpan & muat data dari localStorage
 function saveData() {
+    localStorage.setItem("stm31733_version",     DATA_VERSION);
     localStorage.setItem("stm31733_topics",      JSON.stringify(TOPICS));
     localStorage.setItem("stm31733_assessments", JSON.stringify(ASSESSMENTS));
     localStorage.setItem("stm31733_students",    JSON.stringify(STUDENTS));
 }
 
 function loadData() {
+    // Semak versi — jika berbeza atau tiada, buang data lama & guna default
+    const savedVersion = localStorage.getItem("stm31733_version");
+    if (savedVersion !== DATA_VERSION) {
+        localStorage.removeItem("stm31733_topics");
+        localStorage.removeItem("stm31733_assessments");
+        localStorage.removeItem("stm31733_students");
+        localStorage.setItem("stm31733_version", DATA_VERSION);
+        return; // guna data default dari data.js
+    }
+
     const t = localStorage.getItem("stm31733_topics");
     const a = localStorage.getItem("stm31733_assessments");
     const s = localStorage.getItem("stm31733_students");
-    if (t) {
-        const parsed = JSON.parse(t);
-        // Migration: tukar subtopics string lama kepada objek {text, checked}
-        parsed.forEach(topic => {
-            if (topic.subtopics && topic.subtopics.length > 0 && typeof topic.subtopics[0] === "string") {
-                topic.subtopics = topic.subtopics.map(st => ({ text: st, checked: false }));
-            }
-        });
-        TOPICS.splice(0, TOPICS.length, ...parsed);
-    }
+    if (t) TOPICS.splice(0, TOPICS.length, ...JSON.parse(t));
     if (a) ASSESSMENTS.splice(0, ASSESSMENTS.length, ...JSON.parse(a));
     if (s) STUDENTS.splice(0, STUDENTS.length, ...JSON.parse(s));
 }
