@@ -23,9 +23,9 @@ const TOPICS = [
         no: 1,
         title: "Introduction to Network Administration",
         subtopics: [
-            { text: "1.1 Apply basic knowledge of network administration",   checked: false },
-            { text: "1.2 Roles & responsibilities of Network Administrator", checked: false },
-            { text: "1.3 Functions of Network Operating Center (NOC)",       checked: false },
+            { text: "1.1 Basic knowledge of network administration",   checked: false },
+            { text: "1.2 Tasks  in network administration", checked: false },
+            { text: "1.3 Functions of a Network Operating Center (NOC)",       checked: false },
             { text: "1.4 Best practices in network administration",          checked: false }
         ],
         weeks: "Minggu 1 – 3",
@@ -40,7 +40,7 @@ const TOPICS = [
         subtopics: [
             { text: "2.1 Virtual LAN (VLAN) concept",                                 checked: false },
             { text: "2.2 Basic routing protocols (Static & Dynamic)",                 checked: false },
-            { text: "2.3 Server types and Network Operating System (NOS)",            checked: false }
+            { text: "2.3 Server concepts",            checked: false }
         ],
         weeks: "Minggu 4 – 6",
         clo: "CLO 1",
@@ -52,9 +52,9 @@ const TOPICS = [
         no: 3,
         title: "Network Configuration",
         subtopics: [
-            { text: "3.1 Initial network device configuration (Switch & Router)", checked: false },
+            { text: "3.1 Initial network device configuration", checked: false },
             { text: "3.2 VLAN and Trunking configuration",                        checked: false },
-            { text: "3.3 Network routing (Static & RIPv2)",                       checked: false },
+            { text: "3.3 Implement Network routing (Static & RIPv2)",                       checked: false },
             { text: "3.4 DHCP configuration",                                     checked: false },
             { text: "3.5 DNS configuration",                                      checked: false },
             { text: "3.6 Basic network troubleshooting",                          checked: false }
@@ -71,7 +71,7 @@ const TOPICS = [
         subtopics: [
             { text: "4.1 Concept of network monitoring",                              checked: false },
             { text: "4.2 Network monitoring protocols (SNMP, NetFlow, SSH)",          checked: false },
-            { text: "4.3 Network monitoring tools (install, configure, report)",      checked: false }
+            { text: "4.3 Network monitoring tools",      checked: false }
         ],
         weeks: "Minggu 11 – 13",
         clo: "CLO 3",
@@ -320,16 +320,16 @@ function saveScheduleConfig(cfg) {
 // Setiap entry: { ref, label, hours, pbAfter }
 // pbAfter: penilaian yang diadakan SELEPAS subtopik ini (null jika tiada)
 const SUBTOPIC_SCHEDULE = [
-    { ref: "T1.1", topicId: "T1", label: "1.1 Apply basic knowledge of network administration",   hours: 1,   pbAfter: null },
-    { ref: "T1.2", topicId: "T1", label: "1.2 Roles & responsibilities of Network Administrator", hours: 1,   pbAfter: null },
-    { ref: "T1.3", topicId: "T1", label: "1.3 Functions of Network Operating Center (NOC)",       hours: 1,   pbAfter: null },
+    { ref: "T1.1", topicId: "T1", label: "1.1 Basic knowledge of network administration",   hours: 1,   pbAfter: null },
+    { ref: "T1.2", topicId: "T1", label: "1.2 Tasks  in network administration", hours: 1,   pbAfter: null },
+    { ref: "T1.3", topicId: "T1", label: "1.3 Functions of a Network Operating Center (NOC)",       hours: 1,   pbAfter: null },
     { ref: "T1.4", topicId: "T1", label: "1.4 Best practices in network administration",          hours: 1,   pbAfter: null },
     { ref: "T2.1", topicId: "T2", label: "2.1 Virtual LAN (VLAN) concept",                        hours: 1,   pbAfter: null },
     { ref: "T2.2", topicId: "T2", label: "2.2 Basic routing protocols (Static & Dynamic)",        hours: 1,   pbAfter: null },
-    { ref: "T2.3", topicId: "T2", label: "2.3 Server types and Network Operating System (NOS)",   hours: 1,   pbAfter: "PB1" },  // Test 1j selepas T2.3
+    { ref: "T2.3", topicId: "T2", label: "2.3 Server concepts",   hours: 1,   pbAfter: "PB1" },  // Test 1j selepas T2.3
     { ref: "T3.1", topicId: "T3", label: "3.1 Initial network device configuration",              hours: 7.5, pbAfter: null },
     { ref: "T3.2", topicId: "T3", label: "3.2 VLAN and Trunking configuration",                   hours: 8.5, pbAfter: "PB2" },  // Practical 1 (3j) selepas T3.2
-    { ref: "T3.3", topicId: "T3", label: "3.3 Network routing (Static & RIPv2)",                  hours: 8.5, pbAfter: "PB3" },  // Practical 2 (3j) selepas T3.3
+    { ref: "T3.3", topicId: "T3", label: "3.3 Implement Network routing (Static & RIPv2)",                  hours: 8.5, pbAfter: "PB3" },  // Practical 2 (3j) selepas T3.3
     { ref: "T3.4", topicId: "T3", label: "3.4 DHCP configuration",                               hours: 8.5, pbAfter: null },
     { ref: "T3.5", topicId: "T3", label: "3.5 DNS configuration",                                hours: 8,   pbAfter: null },
     { ref: "T3.6", topicId: "T3", label: "3.6 Basic network troubleshooting",                    hours: 6,   pbAfter: "PB4" },  // Practical 3 (3j) selepas T3.6
