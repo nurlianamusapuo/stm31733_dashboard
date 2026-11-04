@@ -135,6 +135,15 @@ function assessmentSubmittedCount(pbId) {
     return STUDENTS.filter(s => s.marks[pbId] !== null && s.marks[pbId] !== "").length;
 }
 
+// ---- Kira status PB automatik dari data pelajar ----
+function calcPBStatus(pbId) {
+    if (STUDENTS.length === 0) return "belum";
+    const submitted = assessmentSubmittedCount(pbId);
+    if (submitted === 0)               return "belum";
+    if (submitted === STUDENTS.length) return "selesai";
+    return "sedang";
+}
+
 // ---- Toast notification ----
 function showToast(msg, type = "success") {
     let el = document.getElementById("toast");

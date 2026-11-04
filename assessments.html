@@ -175,7 +175,7 @@ function renderPBCards() {
             ${progressBar(pct)}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-            ${pbStatusBadge(a.status)}
+            ${pbStatusBadge(calcPBStatus(a.id))}
             <button class="btn btn-outline btn-sm" onclick="openPbModal('${a.id}')">✏️</button>
           </div>
           ${a.date ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">📅 ${a.date}</div>` : ""}
@@ -202,7 +202,7 @@ function renderPBStatsTable() {
           <td class="center">${stats ? stats.max : '—'}</td>
           <td class="center">${stats ? stats.avg : '—'}</td>
           <td class="center" style="${stats ? (stats.passPct>=70?'color:#16a34a;font-weight:700':stats.passPct>=40?'color:#d97706;font-weight:700':'color:#dc2626;font-weight:700') : ''}">${stats ? stats.passPct + '%' : '—'}</td>
-          <td class="center">${pbStatusBadge(a.status)}</td>
+          <td class="center">${pbStatusBadge(calcPBStatus(a.id))}</td>
           <td class="center"><button class="btn btn-outline btn-sm" onclick="openPbModal('${a.id}')">✏️</button></td>
         </tr>`;
     }).join("");
@@ -273,7 +273,7 @@ function openPbModal(id) {
     if (!a) return;
     document.getElementById("pb-edit-id").value = id;
     document.getElementById("pb-modal-title").textContent = `✏️ Kemaskini – ${a.id}: ${a.name}`;
-    document.getElementById("pb-status").value = a.status;
+    document.getElementById("pb-status").value = calcPBStatus(a.id);
     document.getElementById("pb-date").value   = a.date || "";
     document.getElementById("pb-note").value   = a.note || "";
     document.getElementById("pbModal").classList.add("open");
@@ -283,7 +283,7 @@ function savePbStatus() {
     const id   = document.getElementById("pb-edit-id").value;
     const a    = ASSESSMENTS.find(x => x.id === id);
     if (!a) return;
-    a.status   = document.getElementById("pb-status").value;
+    // status tidak disimpan — dikira automatik dari data pelajar
     const date = document.getElementById("pb-date").value.trim();
     const note = document.getElementById("pb-note").value.trim();
     if (date) a.date = date; else delete a.date;
