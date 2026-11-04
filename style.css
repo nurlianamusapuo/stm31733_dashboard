@@ -141,6 +141,18 @@ body {
     z-index: 50;
     gap: 12px;
 }
+
+/* Logo sentiasa di penjuru kanan topbar */
+.topbar-logo {
+    height: 40px;
+    width: auto;
+    border-radius: 6px;
+    background: #fff;
+    padding: 3px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+    margin-left: auto;
+}
 .topbar-title {
     font-size: 15px;
     font-weight: 700;

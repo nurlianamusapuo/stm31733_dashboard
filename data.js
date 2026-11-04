@@ -285,20 +285,30 @@ function startAutoRefresh(onSuccess, onError) {
 }
 
 // ============================================================
-// JADUAL AKADEMIK
-// Kelas Selasa (2j) + Jumaat (3j) = 5j/minggu × 14 minggu = 70j
+// JADUAL AKADEMIK — Fleksibel (boleh tetapkan hari & jam)
 // ============================================================
 
-// Tetapan jadual — pengguna boleh edit
 const SCHEDULE_CONFIG_KEY = "stm31733_schedule_config";
+
+// Nama hari (0=Ahad, 1=Isnin, 2=Selasa, 3=Rabu, 4=Khamis, 5=Jumaat, 6=Sabtu)
+const DAY_NAMES = ["Ahad","Isnin","Selasa","Rabu","Khamis","Jumaat","Sabtu"];
+const DAY_SHORT = ["Ahd","Isn","Sel","Rab","Kam","Jum","Sab"];
 
 function getScheduleConfig() {
     const saved = localStorage.getItem(SCHEDULE_CONFIG_KEY);
     if (saved) return JSON.parse(saved);
+    // Default: Selasa 2j + Jumaat 3j
     return {
-        firstTuesday: "",      // YYYY-MM-DD — Selasa pertama semester
-        midtermBreakWeek: "",  // YYYY-MM-DD — Selasa minggu cuti pertengahan (boleh kosong)
-        midtermBreakWeeks: 1,  // Bilangan minggu cuti
+        semesterStart: "",      // YYYY-MM-DD — tarikh mula semester
+        midtermBreak:  "",      // YYYY-MM-DD — tarikh mula cuti pertengahan
+        midtermWeeks:  1,       // bilangan minggu cuti
+        classDays: [            // hari kelas & jam
+            { day: 1, hours: 0 },  // Isnin
+            { day: 2, hours: 2 },  // Selasa
+            { day: 3, hours: 0 },  // Rabu
+            { day: 4, hours: 0 },  // Khamis
+            { day: 5, hours: 3 },  // Jumaat
+        ]
     };
 }
 
@@ -331,65 +341,83 @@ const SUBTOPIC_SCHEDULE = [
 // Jam penilaian
 const PB_HOURS = { PB1: 1, PB2: 3, PB3: 3, PB4: 3, PB5: 2 };
 
-// ---- Jana 14 minggu akademik ----
-// Setiap minggu ada 2 slot: Selasa (2j) dan Jumaat (3j)
-function generateAcademicWeeks(firstTuesdayStr, midtermBreakWeekStr, midtermBreakWeeks) {
-    if (!firstTuesdayStr) return [];
+// ---- Kira tarikh hari pertama (dayOfWeek) pada atau selepas tarikh mula ----
+// dayOfWeek: 0=Ahad, 1=Isnin, ... 6=Sabtu
+function firstDayOnOrAfter(startDateStr, dayOfWeek) {
+    const d = new Date(startDateStr + "T00:00:00");
+    const diff = (dayOfWeek - d.getDay() + 7) % 7;
+    return new Date(d.getTime() + diff * 86400000);
+}
+
+// ---- Jana 14 minggu akademik (fleksibel hari kelas) ----
+function generateAcademicWeeks(cfg) {
+    if (!cfg.semesterStart) return [];
+
+    const classDays = (cfg.classDays || []).filter(cd => cd.hours > 0).sort((a,b) => a.day - b.day);
+    if (classDays.length === 0) return [];
+
+    const msPerWeek = 7 * 86400000;
+
+    // Tentukan Isnin minggu pertama kelas
+    // Cari hari kelas terawal, kemudian kira Isnin minggu tersebut
+    const firstClassDay = classDays[0].day; // hari kelas terawal
+    const firstClassDate = firstDayOnOrAfter(cfg.semesterStart, firstClassDay);
+    // Isnin minggu yang sama (day=1)
+    const mondayOffset = (firstClassDate.getDay() - 1 + 7) % 7;
+    let weekMonday = new Date(firstClassDate.getTime() - mondayOffset * 86400000);
+
+    const breakStart = cfg.midtermBreak ? new Date(cfg.midtermBreak + "T00:00:00") : null;
+    const breakCount = parseInt(cfg.midtermWeeks) || 1;
 
     const weeks = [];
-    const msPerDay  = 86400000;
-    const msPerWeek = 7 * msPerDay;
-
-    let weekStart = new Date(firstTuesdayStr + "T00:00:00");
-    let breakStart = midtermBreakWeekStr ? new Date(midtermBreakWeekStr + "T00:00:00") : null;
-    const breakCount = parseInt(midtermBreakWeeks) || 1;
-
     let academicWeek = 1;
     let calendarWeek = 0;
 
     while (academicWeek <= 14) {
-        const tuesday  = new Date(weekStart);
-        const friday   = new Date(weekStart.getTime() + 3 * msPerDay);
         calendarWeek++;
 
-        // Semak sama ada minggu ini adalah cuti
+        // Semak cuti — bandingkan dengan Isnin minggu ini
         const isBreak = breakStart &&
-            weekStart >= breakStart &&
-            weekStart < new Date(breakStart.getTime() + breakCount * msPerWeek);
+            weekMonday >= breakStart &&
+            weekMonday < new Date(breakStart.getTime() + breakCount * msPerWeek);
+
+        // Kira tarikh setiap hari kelas minggu ini
+        const classDates = classDays.map(cd => {
+            const d = new Date(weekMonday.getTime() + (cd.day - 1) * 86400000);
+            // Jika hari=0 (Ahad), offset dari Isnin adalah -1 hari (Ahad sebelumnya) — handle edge case
+            const offset = cd.day === 0 ? 6 : (cd.day - 1);
+            return {
+                day:    cd.day,
+                dayName: DAY_NAMES[cd.day],
+                dayShort: DAY_SHORT[cd.day],
+                hours:  cd.hours,
+                date:   new Date(weekMonday.getTime() + offset * 86400000).toISOString().slice(0,10)
+            };
+        });
+
+        // Tarikh pertama & terakhir kelas dalam minggu untuk paparan
+        const firstDate = classDates[0].date;
+        const lastDate  = classDates[classDates.length-1].date;
 
         if (isBreak) {
-            weeks.push({
-                calWeek: calendarWeek,
-                acWeek:  null,
-                tuesday: tuesday.toISOString().slice(0,10),
-                friday:  friday.toISOString().slice(0,10),
-                isBreak: true,
-                label:   "Cuti Pertengahan Semester"
-            });
+            weeks.push({ calWeek: calendarWeek, acWeek: null, firstDate, lastDate, classDates, isBreak: true, label: "Cuti Pertengahan Semester" });
         } else {
-            weeks.push({
-                calWeek: calendarWeek,
-                acWeek:  academicWeek,
-                tuesday: tuesday.toISOString().slice(0,10),
-                friday:  friday.toISOString().slice(0,10),
-                isBreak: false,
-                label:   "Minggu " + academicWeek
-            });
+            weeks.push({ calWeek: calendarWeek, acWeek: academicWeek, firstDate, lastDate, classDates, isBreak: false, label: "Minggu " + academicWeek });
             academicWeek++;
         }
-        weekStart = new Date(weekStart.getTime() + msPerWeek);
+        weekMonday = new Date(weekMonday.getTime() + msPerWeek);
     }
     return weeks;
 }
 
-// ---- Agihkan subtopik & PB ke dalam slot minggu ----
-// Selasa = 2j, Jumaat = 3j
+// ---- Agihkan subtopik & PB ke dalam slot minggu (fleksibel) ----
 function allocateSchedule(weeks) {
-    const slots = []; // { weekIdx, day, hoursAvail }
+    const slots = [];
     weeks.forEach((w, i) => {
         if (!w.isBreak) {
-            slots.push({ weekIdx: i, day: "tuesday", date: w.tuesday, hoursLeft: 2 });
-            slots.push({ weekIdx: i, day: "friday",  date: w.friday,  hoursLeft: 3 });
+            w.classDates.forEach(cd => {
+                slots.push({ weekIdx: i, dayName: cd.dayName, dayShort: cd.dayShort, day: cd.day, date: cd.date, hoursLeft: cd.hours });
+            });
         }
     });
 
