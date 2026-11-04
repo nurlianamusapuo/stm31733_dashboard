@@ -143,7 +143,7 @@ function loadData() {
 // ============================================================
 
 // URL CSV Google Sheets (Published to Web → CSV)
-const GSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vToi9iXwluPp10EMBe5g8Y6JCKLzSpk39WKZWxpA9q6lpVzO5R9_XcTMf6uNPtBO5eicwhGOewpT2Z3/pub?gid=1681097774&single=true&output=csv";
+const GSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRVi7c6TVDDTGU0MzE0jtu7kddq1PmbhvSbXAZPCRpa6zdpTc_8EVjB0QmDwxSQYnVcyfCDT-8ZE5mj/pub?gid=1043945462&single=true&output=csv";
 
 // Proxy untuk atasi CORS (jika diperlukan)
 const CORS_PROXY = "https://api.allorigins.win/raw?url=";
