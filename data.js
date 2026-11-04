@@ -122,3 +122,149 @@ function loadData() {
     if (a) ASSESSMENTS.splice(0, ASSESSMENTS.length, ...JSON.parse(a));
     if (s) STUDENTS.splice(0, STUDENTS.length, ...JSON.parse(s));
 }
+
+// ============================================================
+// GOOGLE SHEETS INTEGRATION
+// ============================================================
+
+// URL CSV Google Sheets (Published to Web → CSV)
+const GSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vToi9iXwluPp10EMBe5g8Y6JCKLzSpk39WKZWxpA9q6lpVzO5R9_XcTMf6uNPtBO5eicwhGOewpT2Z3/pub?gid=1681097774&single=true&output=csv";
+
+// Proxy untuk atasi CORS (jika diperlukan)
+const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+
+// Status sync terakhir
+let lastSyncTime = null;
+let isSyncing    = false;
+
+// ---- Parse CSV dengan sokongan quoted fields ----
+function parseCSVText(text) {
+    const rows = [];
+    const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    for (const line of lines) {
+        if (!line.trim()) continue;
+        const cols = [];
+        let cur = "", inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+                if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
+                else inQuote = !inQuote;
+            } else if (ch === ',' && !inQuote) {
+                cols.push(cur.trim()); cur = "";
+            } else {
+                cur += ch;
+            }
+        }
+        cols.push(cur.trim());
+        rows.push(cols);
+    }
+    return rows;
+}
+
+// ---- Parse data pelajar dari rows CSV ----
+// Struktur sheet: Row 1 = kumpulan header (TEST, PRACTICAL 1, ...)
+//                 Row 2 = sub-header (NO PEND, NAMA, 15, 15, ...)
+//                 Row 3+ = data pelajar
+// Index lajur: 0=NoPend, 1=Nama, 2=PB1, 3=PB2, 4=PB3, 5=PB4, 6=PB5, 7=TotalCA(skip), 8=FA
+function parseStudentsFromCSV(rows) {
+    const dataRows = rows.slice(2); // skip 2 baris header
+    const parsed = [];
+    let autoId = 1;
+    for (const row of dataRows) {
+        const nama = (row[1] || "").trim();
+        if (!nama) continue; // skip baris kosong
+        const toNum = (v) => {
+            const n = parseFloat((v || "").toString().replace(",", "."));
+            return isNaN(n) ? null : n;
+        };
+        parsed.push({
+            id:   autoId++,
+            name: nama,
+            noPend: (row[0] || "").trim(),
+            marks: {
+                PB1: toNum(row[2]),
+                PB2: toNum(row[3]),
+                PB3: toNum(row[4]),
+                PB4: toNum(row[5]),
+                PB5: toNum(row[6]),
+                FA:  toNum(row[8]),
+            }
+        });
+    }
+    return parsed;
+}
+
+// ---- Tarik data dari Google Sheets ----
+async function fetchFromGoogleSheets(onSuccess, onError) {
+    if (isSyncing) return;
+    isSyncing = true;
+    updateSyncUI("loading");
+
+    // Cuba direct fetch dahulu, kemudian fallback ke proxy jika CORS error
+    const urls = [
+        GSHEET_CSV_URL,
+        CORS_PROXY + encodeURIComponent(GSHEET_CSV_URL)
+    ];
+
+    let lastErr = null;
+    for (const url of urls) {
+        try {
+            const resp = await fetch(url, { cache: "no-store" });
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            const text = await resp.text();
+            if (!text || text.length < 10) throw new Error("Data kosong");
+
+            const rows    = parseCSVText(text);
+            const students = parseStudentsFromCSV(rows);
+
+            if (students.length === 0) throw new Error("Tiada data pelajar ditemui");
+
+            // Kemaskini array STUDENTS
+            STUDENTS.splice(0, STUDENTS.length, ...students);
+            saveData();
+
+            lastSyncTime = new Date();
+            isSyncing = false;
+            updateSyncUI("success");
+            if (typeof onSuccess === "function") onSuccess(students.length);
+            return;
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+
+    // Semua URL gagal
+    isSyncing = false;
+    updateSyncUI("error");
+    if (typeof onError === "function") onError(lastErr);
+}
+
+// ---- Kemaskini UI sync indicator ----
+function updateSyncUI(state) {
+    const btn = document.getElementById("syncBtn");
+    const lbl = document.getElementById("syncStatus");
+    if (!btn && !lbl) return;
+
+    if (state === "loading") {
+        if (btn) { btn.disabled = true; btn.textContent = "⟳ Menyegerak..."; }
+        if (lbl) { lbl.textContent = "Sedang mengambil data..."; lbl.style.color = "#d97706"; }
+    } else if (state === "success") {
+        if (btn) { btn.disabled = false; btn.textContent = "🔄 Refresh dari Google Sheets"; }
+        if (lbl) {
+            const t = lastSyncTime ? lastSyncTime.toLocaleTimeString("ms-MY") : "";
+            lbl.textContent = "✅ Dikemaskini: " + t;
+            lbl.style.color = "#16a34a";
+        }
+    } else if (state === "error") {
+        if (btn) { btn.disabled = false; btn.textContent = "🔄 Refresh dari Google Sheets"; }
+        if (lbl) { lbl.textContent = "❌ Gagal — semak URL atau sambungan internet"; lbl.style.color = "#dc2626"; }
+    }
+}
+
+// ---- Auto-refresh setiap 5 minit ----
+function startAutoRefresh(onSuccess, onError) {
+    setInterval(() => {
+        fetchFromGoogleSheets(onSuccess, onError);
+    }, 5 * 60 * 1000); // 5 minit
+}

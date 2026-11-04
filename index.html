@@ -37,6 +37,10 @@
         <div class="topbar-title">Dashboard Pengurusan P&P</div>
         <div class="topbar-sub" id="topbar-date"></div>
       </div>
+      <div class="flex items-center gap-2" style="flex-shrink:0">
+        <span id="syncStatus" style="font-size:11.5px;color:var(--muted)">— Belum disegerak</span>
+        <button id="syncBtn" class="btn btn-primary btn-sm" onclick="doSync()">🔄 Refresh dari Google Sheets</button>
+      </div>
     </div>
 
     <div class="content">
@@ -119,6 +123,18 @@
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script>
+function doSync() {
+    fetchFromGoogleSheets(
+        (count) => {
+            showToast(`✅ ${count} rekod pelajar berjaya diimport dari Google Sheets!`);
+            pageInit();
+        },
+        (err) => {
+            showToast("❌ Gagal mendapatkan data: " + (err ? err.message : "Ralat tidak diketahui"), "error");
+        }
+    );
+}
+
 function pageInit() {
     setActiveNav();
 
@@ -282,6 +298,12 @@ function pageInit() {
         }).join("");
     }
 }
+
+// Auto-refresh setiap 5 minit — kemaskini dashboard secara automatik
+startAutoRefresh(
+    (count) => { pageInit(); },
+    () => {}
+);
 </script>
 </body>
 </html>
